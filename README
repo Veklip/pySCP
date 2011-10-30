@@ -1,0 +1,14 @@
+pySCP - A Python implementation of the SCP protocol
+
+The idea behind it is to expand the scp functionality a bit without going
+into the area of sftp and rsync (much :)), and also to make it platform-
+independant.
+
+===
+The 'test' folder contains a simple script for testing the bone of pySCP. To
+use the test, put a copy of echo_test.py and reverse_echo.py in the home
+directory[1] of a remote user and then call './echo_test user@host -f'. You
+should be able to get a response from the other side.
+
+[1] For now the home directory is hard coded. I'll probably add it as a
+parameter later on, but it isn't that important now.
