@@ -3,6 +3,7 @@
 import os
 import sys
 import argparse
+import getpass
 import paramiko
 import binascii
 
@@ -26,7 +27,7 @@ def _exec_from(args) :
     try :
         ssh.connect(args[1], username=args[0])
     except paramiko.AuthenticationException :
-        passwd = raw_input("Password: ")
+        passwd = getpass.getpass()
         ssh.connect(args[1], username=args[0], password=passwd)
     stdin, stdout, stderr = ssh.exec_command("~/echo_test.py dummy -t")
     if stdin.channel.closed == False :
@@ -60,7 +61,6 @@ if __name__ == "__main__" :
         print parser.print_help()
         exit(1)
     if len(host) == 1 :
-        import getpass
         host = getpass.getuser(), host[0]
 
     if args.from_v == True :
