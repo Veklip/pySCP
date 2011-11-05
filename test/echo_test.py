@@ -58,7 +58,7 @@ if __name__ == "__main__" :
     args = parser.parse_args(sys.argv[1:])
     host = args.host.split('@')
     if len(host) < 1 or len(host) > 2 :
-        print parser.print_help()
+        parser.print_help()
         exit(1)
     if len(host) == 1 :
         host = getpass.getuser(), host[0]
