@@ -63,14 +63,14 @@ def _local_from(ssh, paths_from, path_to) :
     print >> sys.stderr, "finished transfer"
     ret = stdout.read(1)
     if ret != '\0' :
-        print >> sys.stderr, "Error:", stdout.read()
+        print >> sys.stderr, "Error:", stdout.readline()
         return
     print >> sys.stderr, "sending end signal"
     # command: end of file data transfer
     stdin.write('E\n')
     ret = stdout.read(1)
     if ret != '\0' :
-        print >> sys.stderr, "Error:", stdout.read()
+        print >> sys.stderr, "Error:", stdout.readline()
         return
     print >> sys.stderr, "recieved end signal"
 
