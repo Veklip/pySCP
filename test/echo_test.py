@@ -37,7 +37,7 @@ def _exec_from(args) :
         if stdout.channel.closed == False :
             print "Inverted:", stdout.readline()
     else :
-        if stderr.channle.closed == False :
+        if stderr.channel.closed == False :
             for line in stderr.readlines() :
                 print >> sys.stderr, line
     ssh.close()
