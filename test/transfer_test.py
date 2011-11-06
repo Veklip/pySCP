@@ -188,7 +188,7 @@ if __name__ == "__main__" :
         try :
             _remote_to(paths[:-1], paths[-1])
         except Exception as ex :
-            print >> sys.stderr, "exception", ex.args, ex.message
+            print >> sys.stderr, "exception", ex.args
     else :
         # only executed by the local
         if len(paths) < 2 :
