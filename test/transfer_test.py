@@ -99,7 +99,9 @@ def _remote_to(paths_from, path_to) :
 
     command = sys.stdin.read(1)
     if command != '\0' :
-        print >> sys.stderr, "Unknown protocol command sequence"
+        sys.stdout.write('\2')
+        sys.stdout.write('Unknown protocol command sequence\n')
+        sys.stdout.flush()
         return
 
     fo = open(path, 'wb')
