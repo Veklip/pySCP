@@ -52,7 +52,11 @@ def _local_from(ssh, paths_from, path_to) :
     stdin.write('\0')
     stdin.flush()
     while True :
-        buf = fo.read(4096)
+        if bytes_to_send < 4096 :
+            chunk = bytes_to_send
+        else :
+            chunk = 4096
+        buf = fo.read(chunk)
         if len(buf) :
             stdin.write(buf)
             bytes_to_send = bytes_to_send - len(buf)
@@ -106,7 +110,11 @@ def _remote_to(paths_from, path_to) :
 
     fo = open(path, 'wb')
     while True :
-        buf = sys.stdin.read(4096)
+        if size < 4096 :
+            chunk = size
+        else :
+            chunk = 4096
+        buf = sys.stdin.read(chunk)
         if len(buf) :
             fo.write(buf)
             size = size - len(buf)
