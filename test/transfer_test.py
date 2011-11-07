@@ -32,7 +32,7 @@ def _connect(user, host) :
     return ssh
 
 def _local_from(ssh, paths_from, path_to) :
-    command = "~/transfer_test.py -t %s 2> log.txt" % path_to['path']
+    command = "~/transfer_test.py -t %s" % path_to['path']
     stdin, stdout, stderr = ssh.exec_command(command)
 
     path = paths_from[0]['path']
@@ -64,12 +64,10 @@ def _local_from(ssh, paths_from, path_to) :
         if bytes_to_send <= 0 :
             break
     fo.close()
-    print >> sys.stderr, "finished transfer"
     ret = stdout.read(1)
     if ret != '\0' :
         print >> sys.stderr, "Error:", stdout.readline()
         return
-    print >> sys.stderr, "sending end signal"
     # command: end of file data transfer
     stdin.write('E\n')
     stdin.flush()
@@ -77,7 +75,6 @@ def _local_from(ssh, paths_from, path_to) :
     if ret != '\0' :
         print >> sys.stderr, "Error:", stdout.readline()
         return
-    print >> sys.stderr, "recieved end signal"
 
 def _remote_from(paths_from, path_to) :
     return 0
@@ -122,10 +119,8 @@ def _remote_to(paths_from, path_to) :
             fo.flush()
             break
     fo.close()
-    print >> sys.stderr, "finished transfer"
     sys.stdout.write('\0')
     sys.stdout.flush()
-    print >> sys.stderr, "sent end transfer signal"
 
     command = sys.stdin.readline()
     if command[0] != 'E' :
@@ -136,7 +131,6 @@ def _remote_to(paths_from, path_to) :
     else :
         sys.stdout.write('\0')
         sys.stdout.flush()
-    print >> sys.stderr, "recieved end file data command"
 
 def _build_arg_parser() :
     parser = argparse.ArgumentParser(description="file transfer test script", prog="transfer_test")
