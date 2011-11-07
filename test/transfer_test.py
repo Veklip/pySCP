@@ -59,9 +59,9 @@ def _local_from(ssh, paths_from, path_to) :
         buf = fo.read(chunk)
         if len(buf) :
             stdin.write(buf)
+            stdin.flush()
             bytes_to_send = bytes_to_send - len(buf)
         if bytes_to_send <= 0 :
-            stdin.flush()
             break
     fo.close()
     print >> sys.stderr, "finished transfer"
