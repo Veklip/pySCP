@@ -76,13 +76,99 @@ def _local_from(ssh, paths_from, path_to) :
         print >> sys.stderr, "Error:", stdout.readline()
         return
 
-def _remote_from(paths_from, path_to) :
-    return 0
+def _remote_from(paths) :
+    path = paths[0]['path']
+    fo = open(path, 'rb')
+    stat = os.stat(path)
+    bytes_to_send = stat.st_size
+    # command: sending file
+    # TODO: use mode
+    sys.stdout.write('C0755 %s %s\n' % (bytes_to_send, os.path.basename(path)))
+    sys.stdout.flush()
+    ret = sys.stdin.read(1)
+    if ret != '\0' :
+        exit(ord(ret))
 
-def _local_to(ssh, paths_from, path_to) :
-    return 0
+    # command: beginning data transfer
+    sys.stdout.write('\0')
+    sys.stdout.flush()
+    while True :
+        if bytes_to_send < 4096 :
+            chunk = bytes_to_send
+        else :
+            chunk = 4096
+        buf = fo.read(chunk)
+        if len(buf) :
+            sys.stdout.write(buf)
+            sys.stdout.flush()
+            bytes_to_send = bytes_to_send - len(buf)
+        if bytes_to_send <= 0 :
+            break
+    fo.close()
+    ret = sys.stdin.read(1)
+    if ret != '\0' :
+        exit(ord(ret))
+    # command: end of file data transfer
+    sys.stdout.write('E\n')
+    sys.stdout.flush()
+    ret = sys.stdin.read(1)
+    if ret != '\0' :
+        exit(ord(ret))
 
-def _remote_to(paths_from, path_to) :
+def _local_to(ssh, paths) :
+    command = "~/transfer_test.py -f %s" % paths[0]['path']
+    stdin, stdout, stderr = ssh.exec_command(command)
+
+    command = stdout.readline()
+    # TODO: add regex check on the command format
+    if command[0] != 'C' :
+        stdin.write('\2')
+        stdin.flush()
+        sys.stderr.write('Unknown command %s\n' % command)
+        return
+    else :
+        stdin.write('\0')
+        stdin.flush()
+
+    # ignore the '\n' at the end
+    mode, size, path = command[:-1].split(' ', 3)
+    size = int(size)
+
+    command = stdout.read(1)
+    if command != '\0' :
+        stdin.write('\2')
+        stdin.flush()
+        sys.stderr.write('Unknown protocol command sequence\n')
+        return
+
+    fo = open(path, 'wb')
+    while True :
+        if size < 4096 :
+            chunk = size
+        else :
+            chunk = 4096
+        buf = stdout.read(chunk)
+        if len(buf) :
+            fo.write(buf)
+            size = size - len(buf)
+        if size <= 0 :
+            fo.flush()
+            break
+    fo.close()
+    stdin.write('\0')
+    stdin.flush()
+
+    command = stdout.readline()
+    if command[0] != 'E' :
+        stdin.write('\2')
+        stdin.flush()
+        sys.stderr.write('Unknown command %s\n' % command)
+        return
+    else :
+        stdin.write('\0')
+        stdin.flush()
+
+def _remote_to(paths) :
     command = sys.stdin.readline()
     # TODO: add regex check on the command format
     if command[0] != 'C' :
@@ -188,10 +274,10 @@ if __name__ == "__main__" :
 
     # these should only be called by the remote
     if args.from_v :
-        _remote_from(paths[:-1], paths[-1])
+        _remote_from(paths)
     elif args.to_v :
         try :
-            _remote_to(paths[:-1], paths[-1])
+            _remote_to(paths)
         except Exception as ex :
             print >> sys.stderr, "exception", ex.args
     else :
@@ -208,7 +294,7 @@ if __name__ == "__main__" :
             _local_from(ssh, paths[:-1], paths[-1])
         else :
             # from remove to local
-            _local_to(ssh, paths[:-1], paths[-1])
+            _local_to(ssh, paths)
 
         ssh.close()
     exit(0)
