@@ -207,10 +207,7 @@ if __name__ == "__main__" :
     if args.from_v :
         _remote_from(paths)
     elif args.to_v :
-        try :
-            _remote_to(".")
-        except Exception as ex :
-            print >> sys.stderr, "exception", ex.args
+        _remote_to(paths)
     else :
         # only executed by the local
         if len(paths) < 2 :
