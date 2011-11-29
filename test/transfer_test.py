@@ -31,9 +31,7 @@ def _connect(user, host) :
         ssh.connect(host, username=user, password=passwd)
     return ssh
 
-# TODO: error printing is handled locally and outside this function
-# TODO: errors should be passed through the error channel. the check in
-# the read channel should only be the indication of an error
+# TODO: add T command
 def _send_file(i, o, e, source, target) :
     stat = os.stat(source.name)
     bytes_to_send = stat.st_size
@@ -43,12 +41,9 @@ def _send_file(i, o, e, source, target) :
     i.flush()
     ret = o.read(1)
     if ret != '\0' :
-        print >> sys.stderr, "Error:", o.readline()
         return 1
 
-    # command: beginning data transfer
-    i.write('\0')
-    i.flush()
+    # data transfer starts right after C command
     while True :
         if bytes_to_send < 4096 :
             chunk = bytes_to_send
@@ -63,15 +58,7 @@ def _send_file(i, o, e, source, target) :
             break
     ret = o.read(1)
     if ret != '\0' :
-        print >> sys.stderr, "Error:", o.readline()
-        return 1
-    # command: end of file data transfer
-    i.write('E\n')
-    i.flush()
-    ret = o.read(1)
-    if ret != '\0' :
-        print >> sys.stderr, "Error:", o.readline()
-        return 1
+        return 2
 
     return 0
 
@@ -81,7 +68,6 @@ def _recv_file(i, o, e, target_dir) :
     if command[0] != 'C' :
         i.write('\2')
         i.flush()
-        sys.stderr.write('Unknown command %s\n' % command)
         return 1
     else :
         i.write('\0')
@@ -90,13 +76,6 @@ def _recv_file(i, o, e, target_dir) :
     # ignore the '\n' at the end
     mode, size, path = command[:-1].split(' ', 3)
     size = int(size)
-
-    command = o.read(1)
-    if command != '\0' :
-        i.write('\2')
-        i.flush()
-        sys.stderr.write('Unknown protocol command sequence\n')
-        return 1
 
     fo = open(os.path.join(target_dir, path), 'wb')
     while True :
@@ -114,16 +93,6 @@ def _recv_file(i, o, e, target_dir) :
     fo.close()
     i.write('\0')
     i.flush()
-
-    command = o.readline()
-    if command[0] != 'E' :
-        i.write('\2')
-        i.flush()
-        sys.stderr.write('Unknown command %s\n' % command)
-        return 1
-    else :
-        i.write('\0')
-        i.flush()
 
     return 0
 
