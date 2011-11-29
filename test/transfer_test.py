@@ -231,7 +231,7 @@ if __name__ == "__main__" :
             _local_from(ssh, paths[:-1], paths[-1])
         else :
             # from remove to local
-            _local_to(ssh, paths, ".")
+            _local_to(ssh, paths[:-1], paths[-1])
 
         ssh.close()
     exit(0)
