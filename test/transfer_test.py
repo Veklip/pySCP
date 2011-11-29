@@ -208,14 +208,14 @@ def _check_paths(paths) :
 if __name__ == "__main__" :
     parser = _build_arg_parser()
     args = parser.parse_args(sys.argv[1:])
-    paths = _parse_paths(args.paths)
 
     # these should only be called by the remote
     if args.from_v :
-        _remote_from(paths)
+        _remote_from(args.paths)
     elif args.to_v :
-        _remote_to(paths)
+        _remote_to(args.paths)
     else :
+        paths = _parse_paths(args.paths)
         # only executed by the local
         if len(paths) < 2 :
             parser.print_help()
