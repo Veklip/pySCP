@@ -56,9 +56,8 @@ def _send_file(i, o, e, source, target) :
             bytes_to_send = bytes_to_send - len(buf)
         if bytes_to_send <= 0 :
             break
-    ret = o.read(1)
-    if ret != '\0' :
-        return 2
+    i.write('\0')
+    i.flush()
 
     return 0
 
@@ -91,8 +90,9 @@ def _recv_file(i, o, e, target_dir) :
             fo.flush()
             break
     fo.close()
-    i.write('\0')
-    i.flush()
+    ret = o.read(1)
+    if ret != '\0'
+        return 2
 
     return 0
 
