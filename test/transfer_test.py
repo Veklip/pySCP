@@ -34,7 +34,7 @@ def _connect(user, host) :
 # TODO: error printing is handled locally and outside this function
 # TODO: errors should be passed through the error channel. the check in
 # the read channel should only be the indication of an error
-def _from(i, o, e, source, target) :
+def _send_file(i, o, e, source, target) :
     stat = os.stat(source.name)
     bytes_to_send = stat.st_size
     # command: sending file
@@ -75,7 +75,7 @@ def _from(i, o, e, source, target) :
 
     return 0
 
-def _to(i, o, e, target_dir) :
+def _recv_file(i, o, e, target_dir) :
     command = o.readline()
     # TODO: add regex check on the command format
     if command[0] != 'C' :
@@ -127,27 +127,27 @@ def _to(i, o, e, target_dir) :
 
     return 0
 
-def _local_from(ssh, paths_from, path_to) :
+def _local_send(ssh, paths_from, path_to) :
     command = "~/transfer_test.py -t %s" % path_to['path']
     stdin, stdout, stderr = ssh.exec_command(command)
 
     fo = open(paths_from[0]['path'], 'rb')
-    _from(stdin, stdout, stderr, fo, os.path.basename(path_to['path']))
+    _send_file(stdin, stdout, stderr, fo, os.path.basename(path_to['path']))
     fo.close()
 
-def _remote_from(paths) :
+def _remote_send(paths) :
     fo = open(paths[0]['path'], 'rb')
-    _from(sys.stdout, sys.stdin, sys.stderr, fo, os.path.basename(paths[0]['path']))
+    _send_file(sys.stdout, sys.stdin, sys.stderr, fo, os.path.basename(paths[0]['path']))
     fo.close()
 
-def _local_to(ssh, paths, dir_path) :
+def _local_recv(ssh, paths, dir_path) :
     command = "~/transfer_test.py -f %s" % paths[0]['path']
     stdin, stdout, stderr = ssh.exec_command(command)
 
-    _to(stdin, stdout, stderr, dir_path)
+    _recv_file(stdin, stdout, stderr, dir_path)
 
-def _remote_to(dir_path) :
-    _to(sys.stdout, sys.stdin, sys.stderr, dir_path)
+def _remote_recv(dir_path) :
+    _recv_file(sys.stdout, sys.stdin, sys.stderr, dir_path)
 
 def _build_arg_parser() :
     parser = argparse.ArgumentParser(description="file transfer test script", prog="transfer_test")
@@ -211,9 +211,9 @@ if __name__ == "__main__" :
 
     # these should only be called by the remote
     if args.from_v :
-        _remote_from(args.paths)
+        _remote_send(args.paths)
     elif args.to_v :
-        _remote_to(args.paths)
+        _remote_recv(args.paths)
     else :
         paths = _parse_paths(args.paths)
         # only executed by the local
@@ -228,10 +228,10 @@ if __name__ == "__main__" :
 
         if send :
             # from local to remote
-            _local_from(ssh, paths[:-1], paths[-1])
+            _local_send(ssh, paths[:-1], paths[-1])
         else :
             # from remove to local
-            _local_to(ssh, paths[:-1], paths[-1])
+            _local_recv(ssh, paths[:-1], paths[-1])
 
         ssh.close()
     exit(0)
