@@ -172,22 +172,29 @@ def _parse_paths(paths) :
                 parsed_paths.append({'user':usr_host[0], 'host':usr_host[1], 'path':host_path[1]})
     return parsed_paths
 
-# TODO: check if all input and output files are from the same hosts
 def _analyse_paths(paths) :
-    if paths[0]['host'] != 'local' :
-        send = False
-        path = paths[0]
-    elif paths[-1]['host'] != 'local' :
-        send = True
-        path = paths[-1]
-    else :
-        print >> sys.stderr, "Error: no remote host"
-        exit(1)
+    user = paths[0]['user']
+    host = paths[0]['host']
 
-    if path['user'] != 'current' :
-        return send, path['user'], path['host']
+    for i in range(1, len(paths) - 1) :
+        if user != paths[i]['user'] or host != paths[i]['host'] :
+            print >> sys.stderr, "Error: all source paths need to be from the same user and host"
+            return False, "", ""
+
+    if host == paths[-1]['host'] :
+        print >> sys.stderr, "Error: source and sink files need to be with different hosts"
+        return False, "", ""
+
+    if host == "local" :
+        if paths[-1]['user'] != 'current' :
+            return True, paths[-1]['user'], paths[-1]['host']
+        else :
+            return True, getpass.getuser(), paths[-1]['host']
     else :
-        return send, getpass.getuser(), path['host']
+        if user != 'current' :
+            return False, user, host
+        else :
+            return False, getpass.getuser(), host
 
 def _check_paths(paths) :
     ok = True
@@ -214,6 +221,8 @@ if __name__ == "__main__" :
             parser.print_help()
             exit(1)
         send, user, host = _analyse_paths(paths)
+        if len(host) == 0 :
+            exit(1)
 
         ssh = _connect(user, host)
 
