@@ -73,7 +73,7 @@ def _recv_file(i, o, e, target_dir) :
         i.flush()
 
     # ignore the '\n' at the end
-    mode, size, path = command[:-1].split(' ', 3)
+    mode, size, path = command[1:-1].split(' ', 3)
     size = int(size)
 
     fo = open(os.path.join(target_dir, path), 'wb')
