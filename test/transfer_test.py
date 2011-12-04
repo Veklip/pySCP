@@ -37,7 +37,7 @@ def _send_file(i, o, e, source, target) :
     bytes_to_send = stat.st_size
     # command: sending file
     # TODO: use mode
-    i.write('C0755 %s %s\n' % (bytes_to_send, target))
+    i.write('C0755 %ld %s\n' % (bytes_to_send, target))
     i.flush()
     ret = o.read(1)
     if ret != '\0' :
