@@ -4,6 +4,35 @@ The idea behind it is to expand the scp functionality a bit without going
 into the area of sftp and rsync (much :)), and also to make it platform-
 independant.
 
+SCP protocol pseudo-example:
+sink  : 0 # ready to recieve
+source: T<unix mtime> 0 <unix atime> 0 # optional (-p)
+sink  : 0 # confirm
+source: D0xxx 0 <dir name> # if sending a directory
+sink  : 0
+source: T<unix mtime> 0 <unix atime> 0
+sink  : 0
+source: C0xxx <size> <file name>
+sink  : 0
+source: <data>
+source: 0 # data end
+sink  : 0 # ok
+source: T<unix mtime> 0 <unix atime> 0
+sink  : 0
+source: C0xxx <size> <file name>
+sink  : 0
+source: <data>
+source: 0
+sink  : 0
+....
+source: D0xxx 0 <dir name>
+sink  : 0
+....
+source: E # confirm end of directory
+sink  : 0
+source: E
+sink  : 0
+
 ===
 The 'test' folder contains a simple script for testing the bone of pySCP. To
 use the test, put a copy of echo_test.py and reverse_echo.py in the home
