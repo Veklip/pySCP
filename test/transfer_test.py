@@ -32,55 +32,106 @@ def _connect(user, host) :
     return ssh
 
 # TODO: add T command
-def _send_file(i, o, e, source, target) :
-    stat = os.stat(source.name)
+def _send_file(i, o, e, file_path) :
+    stat = os.stat(file_path)
     bytes_to_send = stat.st_size
+    mode = oct(stat.st_mode & 0x1FF)
     # command: sending file
-    # TODO: use mode
-    i.write('C0755 %ld %s\n' % (bytes_to_send, target))
+    i.write('C%s %ld %s\n' % (mode, bytes_to_send, os.path.basename(file_path)))
     i.flush()
     ret = o.read(1)
     if ret != '\0' :
         return 1
 
     # data transfer starts right after C command
+    fo = open(file_path, 'rb')
     while True :
         if bytes_to_send < 4096 :
             chunk = bytes_to_send
         else :
             chunk = 4096
-        buf = source.read(chunk)
+        buf = fo.read(chunk)
         if len(buf) :
             i.write(buf)
             i.flush()
             bytes_to_send = bytes_to_send - len(buf)
         if bytes_to_send <= 0 :
             break
+    fo.close()
     # data transfer end
     i.write('\0')
     i.flush()
-    ret = o.recv(1)
+    ret = o.read(1)
     if ret != '\0' :
         return 2
 
     return 0
 
-def _recv_file(i, o, e, target_dir) :
-    command = o.readline()
-    # TODO: add regex check on the command format
-    if command[0] != 'C' :
-        i.write('\2')
-        i.flush()
+def _send_dir(i, o, e, dir_path) :
+    name = os.path.basename(dir_path)
+    stat = os.stat(dir_path)
+    mode = oct(stat.st_mode & 0x1FF)
+    # command: sending directory
+    i.write('D%s 0 %s\n' % (mode, name))
+    i.flush()
+    ret = o.read(1)
+    if ret != '\0' :
         return 1
-    else :
+
+    items = os.listdir(dir_path)
+    ret = 0
+    for it in items :
+        p = os.path.join(dir_path, it)
+        if os.path.isdir(p) :
+            ret = _send_dir(i, o, e, p)
+        elif os.path.isfile(p) :
+            ret = _send_file(i, o, e, p)
+        if ret != 0 :
+            return ret
+
+    i.write('E\n');
+    i.flush();
+    ret = o.read(1)
+    if ret != '\0' :
+        return 2
+
+    return 0
+
+def _recv_file_dir_or_end(i, o, e, target_dir) :
+    # TODO: handle the return codes of the _recv_* functions
+    command = o.readline()
+    if len(command) == 0 :
+        return -1 # end of transfer ?
+    ret = 65535 # big enough number
+    if command[0] == 'C' :
         i.write('\0')
         i.flush()
+        ret = _recv_file(i, o, e, target_dir, command)
+    elif command[0] == 'D' :
+        i.write('\0')
+        i.flush()
+        ret = _recv_dir(i, o, e, target_dir, command)
+    elif command[0] == 'E' :
+        i.write('\0')
+        i.flush()
+        ret = -1 # end of directory
+    else :
+        i.write('\2')
+        i.flush()
+    return ret
 
+def _recv_file(i, o, e, target_dir, command) :
+    # TODO: add regex check on the command format
     # ignore the '\n' at the end
     mode, size, path = command[1:-1].split(' ', 3)
     size = int(size)
+    mode = int(mode, 8)
 
-    fo = open(os.path.join(target_dir, path), 'wb')
+    if os.path.isdir(target_dir) :
+        file_path = os.path.join(target_dir, path)
+    else :
+        file_path = target_dir
+    fo = open(file_path, 'wb')
     while True :
         if size < 4096 :
             chunk = size
@@ -94,44 +145,115 @@ def _recv_file(i, o, e, target_dir) :
             fo.flush()
             break
     fo.close()
+    os.chmod(file_path, mode)
     ret = o.read(1)
-    if ret != '\0'
+    if ret != '\0' :
         i.write('\2')
         i.flush()
         return 2
-    else
+    else :
         i.write('\0')
         i.flush()
 
     return 0
 
-def _local_send(ssh, paths_from, path_to) :
-    command = "~/transfer_test.py -t %s" % path_to['path']
+def _recv_dir(i, o, e, dir_path, command) :
+    # ignore the '\n' at the end
+    mode, size, name = command[1:-1].split(' ', 3)
+    mode = int(mode, 8)
+
+    # TODO: check if sending dir is the same
+    new_dir_path = os.path.join(dir_path, name)
+    if not os.path.exists(new_dir_path) :
+        os.mkdir(new_dir_path, mode)
+    else :
+        os.chmod(new_dir_path, mode)
+
+    while True :
+        ret = _recv_file_dir_or_end(i, o, e, new_dir_path)
+        if ret == -1 :
+            return 0 # E command
+        if ret == 65535 :
+            return 1 # wrong command
+        if ret != 0 :
+            return 2 # error in transfer
+
+def _local_send(ssh, paths, sink_path, rec) :
+    command = "~/transfer_test.py -t"
+    if rec :
+        command += "r"
+    command = ' '.join((command, sink_path))
     stdin, stdout, stderr = ssh.exec_command(command)
 
-    fo = open(paths_from[0]['path'], 'rb')
-    _send_file(stdin, stdout, stderr, fo, os.path.basename(path_to['path']))
-    fo.close()
+    # check if receiving end is ready
+    ret = stdout.read(1)
+    if ret != '\0' :
+        return 1
 
-def _remote_send(paths) :
-    fo = open(paths[0]['path'], 'rb')
-    _send_file(sys.stdout, sys.stdin, sys.stderr, fo, os.path.basename(paths[0]['path']))
-    fo.close()
+    ret = 0
+    for p in paths :
+        if os.path.isfile(p) :
+            ret = _send_file(stdin, stdout, stderr, p)
+        elif os.path.isdir(p) :
+            ret = _send_dir(stdin, stdout, stderr, p)
+        if ret != 0 :
+            break
+    return ret
 
-def _local_recv(ssh, paths, dir_path) :
-    command = "~/transfer_test.py -f %s" % paths[0]['path']
+def _remote_send(paths, rec) :
+    # check if receiving end is ready
+    ret = sys.stdin.read(1)
+    if ret != '\0' :
+        return 1
+
+    ret = 0
+    for p in paths :
+        if os.path.isfile(p) :
+            ret = _send_file(sys.stdout, sys.stdin, sys.stderr, p)
+        elif os.path.isdir(p) :
+            ret = _send_dir(sys.stdout, sys.stdin, sys.stderr, p)
+        if ret != 0 :
+            break
+    return ret
+
+def _local_recv(ssh, paths, dir_path, rec) :
+    command = "~/transfer_test.py -f"
+    if rec :
+        command += "r"
+    command = ' '.join((command, ' '.join(paths)))
     stdin, stdout, stderr = ssh.exec_command(command)
 
-    _recv_file(stdin, stdout, stderr, dir_path)
+    stdin.write('\0') # ready to receive
+    stdin.flush()
 
-def _remote_recv(dir_path) :
-    _recv_file(sys.stdout, sys.stdin, sys.stderr, dir_path)
+    while True :
+        ret = _recv_file_dir_or_end(stdin, stdout, stderr, dir_path)
+        if ret == -1 :
+            return 0 # E command
+        if ret == 65535 :
+            return 1 # wrong command
+        if ret != 0 :
+            return 2 # error in transfer
+
+def _remote_recv(dir_path, rec) :
+    sys.stdout.write('\0') # ready to receive
+    sys.stdout.flush()
+
+    while True :
+        ret = _recv_file_dir_or_end(sys.stdout, sys.stdin, sys.stderr, dir_path)
+        if ret == -1 :
+            return 0 # E command
+        if ret == 65535 :
+            return 1 # wrong command
+        if ret != 0 :
+            return 2 # error in transfer
 
 def _build_arg_parser() :
     parser = argparse.ArgumentParser(description="file transfer test script", prog="transfer_test")
-    parser.add_argument("paths", action="store", nargs="+", default=None, help="([[user@]host:]/path/to/file){2,}")
-    parser.add_argument("-f", "--from", action="store_true", default=None, help="source", dest="from_v")
-    parser.add_argument("-t", "--to", action="store_true", default=None, help="destination", dest="to_v")
+    parser.add_argument("paths", action="store", nargs="+", default=None, help="[[user@]host1:]file1 ... [[user@]host2:]file2")
+    parser.add_argument("-f", action="store_true", default=None, help="source", dest="from_v")
+    parser.add_argument("-t", action="store_true", default=None, help="destination", dest="to_v")
+    parser.add_argument("-r", action="store_true", default=None, help="recursively copy directories", dest="rec")
     return parser
 
 def _parse_paths(paths) :
@@ -153,26 +275,29 @@ def _parse_paths(paths) :
 def _analyse_paths(paths) :
     user = paths[0]['user']
     host = paths[0]['host']
+    stripped = [paths[0]['path']]
 
     for i in range(1, len(paths) - 1) :
         if user != paths[i]['user'] or host != paths[i]['host'] :
             print >> sys.stderr, "Error: all source paths need to be from the same user and host"
-            return False, "", ""
+            return False, "", "", []
+        stripped.append(paths[i]['path'])
 
     if host == paths[-1]['host'] :
         print >> sys.stderr, "Error: source and sink files need to be with different hosts"
-        return False, "", ""
+        return False, "", "", []
+    stripped.append(paths[-1]['path'])
 
     if host == "local" :
         if paths[-1]['user'] != 'current' :
-            return True, paths[-1]['user'], paths[-1]['host']
+            return True, paths[-1]['user'], paths[-1]['host'], stripped
         else :
-            return True, getpass.getuser(), paths[-1]['host']
+            return True, getpass.getuser(), paths[-1]['host'], stripped
     else :
         if user != 'current' :
-            return False, user, host
+            return False, user, host, stripped
         else :
-            return False, getpass.getuser(), host
+            return False, getpass.getuser(), host, stripped
 
 def _check_paths(paths) :
     ok = True
@@ -188,17 +313,18 @@ if __name__ == "__main__" :
     args = parser.parse_args(sys.argv[1:])
 
     # these should only be called by the remote
+    ret = 0
     if args.from_v :
-        _remote_send(args.paths)
+        ret = _remote_send(args.paths, args.rec)
     elif args.to_v :
-        _remote_recv(args.paths)
+        ret = _remote_recv(args.paths[0], args.rec)
     else :
         paths = _parse_paths(args.paths)
         # only executed by the local
         if len(paths) < 2 :
             parser.print_help()
             exit(1)
-        send, user, host = _analyse_paths(paths)
+        send, user, host, paths = _analyse_paths(paths)
         if len(host) == 0 :
             exit(1)
 
@@ -206,10 +332,10 @@ if __name__ == "__main__" :
 
         if send :
             # from local to remote
-            _local_send(ssh, paths[:-1], paths[-1])
+            ret = _local_send(ssh, paths[:-1], paths[-1], args.rec)
         else :
             # from remove to local
-            _local_recv(ssh, paths[:-1], paths[-1])
+            ret = _local_recv(ssh, paths[:-1], paths[-1], args.rec)
 
         ssh.close()
-    exit(0)
+    exit(ret)
