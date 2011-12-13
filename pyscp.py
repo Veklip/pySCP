@@ -14,36 +14,10 @@ def _local_send(ssh, paths, sink_path, rec) :
     command = ' '.join((command, sink_path))
     stdin, stdout, stderr = ssh.exec_command(command)
 
-    # check if receiving end is ready
-    ret = stdout.read(1)
-    if ret != '\0' :
-        return 1
-
-    ret = 0
-    for p in paths :
-        if os.path.isfile(p) :
-            ret = tfr.send_file(stdin, stdout, p)
-        elif os.path.isdir(p) :
-            ret = tfr.send_dir(stdin, stdout, p)
-        if ret != 0 :
-            break
-    return ret
+    return tfr.send(stdin, stdout, paths)
 
 def _remote_send(paths, rec) :
-    # check if receiving end is ready
-    ret = sys.stdin.read(1)
-    if ret != '\0' :
-        return 1
-
-    ret = 0
-    for p in paths :
-        if os.path.isfile(p) :
-            ret = tfr.send_file(sys.stdout, sys.stdin, p)
-        elif os.path.isdir(p) :
-            ret = tfr.send_dir(sys.stdout, sys.stdin, p)
-        if ret != 0 :
-            break
-    return ret
+    return tfr.send(sys.stdout, sys.stdin, paths)
 
 def _local_recv(ssh, paths, dir_path, rec) :
     command = "pyscp.py -f"
@@ -52,30 +26,10 @@ def _local_recv(ssh, paths, dir_path, rec) :
     command = ' '.join((command, ' '.join(paths)))
     stdin, stdout, stderr = ssh.exec_command(command)
 
-    stdin.write('\0') # ready to receive
-    stdin.flush()
-
-    while True :
-        ret = tfr.recv_file_dir_or_end(stdin, stdout, dir_path)
-        if ret == -1 :
-            return 0 # E command
-        if ret == 65535 :
-            return 1 # wrong command
-        if ret != 0 :
-            return 2 # error in transfer
+    return tfr.recv(stdin, stdout, dir_path)
 
 def _remote_recv(dir_path, rec) :
-    sys.stdout.write('\0') # ready to receive
-    sys.stdout.flush()
-
-    while True :
-        ret = tfr.recv_file_dir_or_end(sys.stdout, sys.stdin, dir_path)
-        if ret == -1 :
-            return 0 # E command
-        if ret == 65535 :
-            return 1 # wrong command
-        if ret != 0 :
-            return 2 # error in transfer
+    return tfr.recv(sys.stdout, sys.stdin, dir_path)
 
 def _build_arg_parser() :
     parser = argparse.ArgumentParser(description="file transfer test script", prog="transfer_test")

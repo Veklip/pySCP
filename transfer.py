@@ -69,6 +69,22 @@ def send_dir(i, o, dir_path) :
 
     return 0
 
+def send(i, o, paths) :
+    # check if receiving end is ready
+    ret = o.read(1)
+    if ret != '\0' :
+        return 1
+
+    ret = 0
+    for p in paths :
+        if os.path.isfile(p) :
+            ret = send_file(i, o, p)
+        elif os.path.isdir(p) :
+            ret = send_dir(i, o, p)
+        if ret != 0 :
+            break
+    return ret
+
 def recv_file_dir_or_end(i, o, target_dir) :
     # TODO: handle the return codes of the _recv_* functions
     command = o.readline()
@@ -143,6 +159,19 @@ def recv_dir(i, o, dir_path, command) :
 
     while True :
         ret = recv_file_dir_or_end(i, o, new_dir_path)
+        if ret == -1 :
+            return 0 # E command
+        if ret == 65535 :
+            return 1 # wrong command
+        if ret != 0 :
+            return 2 # error in transfer
+
+def recv(i, o, dir_path) :
+    i.write('\0') # ready to receive
+    i.flush()
+
+    while True :
+        ret = recv_file_dir_or_end(i, o, dir_path)
         if ret == -1 :
             return 0 # E command
         if ret == 65535 :
