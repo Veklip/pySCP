@@ -1,6 +1,5 @@
 #!/usr/bin/python
 
-import os
 import sys
 import argparse
 import parser as psr
