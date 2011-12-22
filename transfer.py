@@ -2,6 +2,7 @@
 
 import os
 import sys
+import error
 
 # TODO: add T command
 def send_file(i, o, file_path) :
@@ -13,7 +14,7 @@ def send_file(i, o, file_path) :
     i.flush()
     ret = o.read(1)
     if ret != '\0' :
-        return 1
+        return error.E_UNK
 
     # data transfer starts right after C command
     fo = open(file_path, 'rb')
@@ -35,9 +36,9 @@ def send_file(i, o, file_path) :
     i.flush()
     ret = o.read(1)
     if ret != '\0' :
-        return 2
+        return error.E_TFR
 
-    return 0
+    return error.E_OK
 
 def send_dir(i, o, dir_path) :
     name = os.path.basename(dir_path)
@@ -48,49 +49,48 @@ def send_dir(i, o, dir_path) :
     i.flush()
     ret = o.read(1)
     if ret != '\0' :
-        return 1
+        return error.E_UNK
 
     items = os.listdir(dir_path)
-    ret = 0
+    ret = error.E_OK
     for it in items :
         p = os.path.join(dir_path, it)
         if os.path.isdir(p) :
             ret = send_dir(i, o, p)
         elif os.path.isfile(p) :
             ret = send_file(i, o, p)
-        if ret != 0 :
+        if ret != error.E_OK :
             return ret
 
     i.write('E\n');
     i.flush();
     ret = o.read(1)
     if ret != '\0' :
-        return 2
+        return error.E_UNK
 
-    return 0
+    return error.E_OK
 
 def send(i, o, paths) :
     # check if receiving end is ready
     ret = o.read(1)
     if ret != '\0' :
-        return 1
+        return error.E_RDY
 
-    ret = 0
+    ret = error.E_OK
     for p in paths :
         if os.path.isfile(p) :
             ret = send_file(i, o, p)
         elif os.path.isdir(p) :
             ret = send_dir(i, o, p)
-        if ret != 0 :
+        if ret != error.E_OK :
             break
     return ret
 
 def recv_file_dir_or_end(i, o, target_dir) :
-    # TODO: handle the return codes of the _recv_* functions
     command = o.readline()
     if len(command) == 0 :
-        return -1 # end of transfer ?
-    ret = 65535 # big enough number
+        return error.E_END # end of transfer ?
+    ret = error.E_UNK
     if command[0] == 'C' :
         i.write('\0')
         i.flush()
@@ -102,7 +102,7 @@ def recv_file_dir_or_end(i, o, target_dir) :
     elif command[0] == 'E' :
         i.write('\0')
         i.flush()
-        ret = -1 # end of directory
+        ret = error.E_END # end of directory
     else :
         i.write('\2')
         i.flush()
@@ -138,12 +138,12 @@ def recv_file(i, o, target_dir, command) :
     if ret != '\0' :
         i.write('\2')
         i.flush()
-        return 2
+        return error.E_TFR
     else :
         i.write('\0')
         i.flush()
 
-    return 0
+    return error.E_OK
 
 def recv_dir(i, o, dir_path, command) :
     # ignore the '\n' at the end
@@ -159,12 +159,10 @@ def recv_dir(i, o, dir_path, command) :
 
     while True :
         ret = recv_file_dir_or_end(i, o, new_dir_path)
-        if ret == -1 :
-            return 0 # E command
-        if ret == 65535 :
-            return 1 # wrong command
-        if ret != 0 :
-            return 2 # error in transfer
+        if ret == error.E_END :
+            return error.E_OK
+        if ret != error.E_OK :
+            return ret
 
 def recv(i, o, dir_path) :
     i.write('\0') # ready to receive
@@ -172,9 +170,7 @@ def recv(i, o, dir_path) :
 
     while True :
         ret = recv_file_dir_or_end(i, o, dir_path)
-        if ret == -1 :
-            return 0 # E command
-        if ret == 65535 :
-            return 1 # wrong command
-        if ret != 0 :
-            return 2 # error in transfer
+        if ret == error.E_END :
+            return error.E_OK
+        if ret != error.E_OK :
+            return ret
