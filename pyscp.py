@@ -4,6 +4,7 @@ import sys
 import argparse
 import parser as psr
 import connector as con
+import error
 import transfer as tfr
 
 def _local_send(ssh, paths, sink_path, rec) :
@@ -13,10 +14,19 @@ def _local_send(ssh, paths, sink_path, rec) :
     command = ' '.join((command, sink_path))
     stdin, stdout, stderr = ssh.exec_command(command)
 
-    return tfr.send(stdin, stdout, paths)
+    ret = tfr.send(stdin, stdout, paths)
+    if ret == error.E_OK or ret == error.E_END :
+        return 0
+    else :
+        sys.stderr.write(stderr.readline())
+        return 1
 
 def _remote_send(paths, rec) :
-    return tfr.send(sys.stdout, sys.stdin, paths)
+    ret = tfr.send(sys.stdout, sys.stdin, paths)
+    if ret == error.E_OK or ret == error.E_END :
+        return 0
+    else :
+        return 1
 
 def _local_recv(ssh, paths, dir_path, rec) :
     command = "pyscp.py -f"
@@ -25,10 +35,20 @@ def _local_recv(ssh, paths, dir_path, rec) :
     command = ' '.join((command, ' '.join(paths)))
     stdin, stdout, stderr = ssh.exec_command(command)
 
-    return tfr.recv(stdin, stdout, dir_path)
+    ret = tfr.recv(stdin, stdout, dir_path)
+    if ret == error.E_OK or ret == error.E_END :
+        return 0
+    else :
+        sys.stderr.write(error.errstr(ret))
+        return 1
 
 def _remote_recv(dir_path, rec) :
-    return tfr.recv(sys.stdout, sys.stdin, dir_path)
+    ret = tfr.recv(sys.stdout, sys.stdin, dir_path)
+    if ret == error.E_OK or ret == error.E_END :
+        return 0
+    else :
+        sys.stderr.write(error.errstr(ret))
+        return 1
 
 def _build_arg_parser() :
     parser = argparse.ArgumentParser(description="file transfer test script", prog="transfer_test")
