@@ -111,7 +111,7 @@ def recv_file_dir_or_end(i, o, target_dir) :
 def recv_file(i, o, target_dir, command) :
     # TODO: add regex check on the command format
     # ignore the '\n' at the end
-    mode, size, path = command[1:-1].split(' ', 3)
+    mode, size, path = command[1:-1].split(' ', 2)
     size = int(size)
     mode = int(mode, 8)
 
@@ -147,7 +147,7 @@ def recv_file(i, o, target_dir, command) :
 
 def recv_dir(i, o, dir_path, command) :
     # ignore the '\n' at the end
-    mode, size, name = command[1:-1].split(' ', 3)
+    mode, size, name = command[1:-1].split(' ', 2)
     mode = int(mode, 8)
 
     # TODO: check if sending dir is the same
