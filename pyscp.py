@@ -7,43 +7,47 @@ import connector as con
 import error
 import transfer as tfr
 
-def _local_send(ssh, paths, sink_path, rec) :
+def _local_send(ssh, paths, sink_path, rec, preserve) :
     command = "pyscp.py -t"
     if rec :
         command += "r"
+    if preserve :
+        command += "p"
     command = ' '.join((command, sink_path))
     stdin, stdout, stderr = ssh.exec_command(command)
 
-    ret = tfr.send(stdin, stdout, paths)
+    ret = tfr.send(stdin, stdout, paths, preserve)
     if ret == error.E_OK or ret == error.E_END :
         return 0
     else :
         sys.stderr.write(stderr.readline())
         return 1
 
-def _remote_send(paths, rec) :
-    ret = tfr.send(sys.stdout, sys.stdin, paths)
+def _remote_send(paths, rec, preserve) :
+    ret = tfr.send(sys.stdout, sys.stdin, paths, preserve)
     if ret == error.E_OK or ret == error.E_END :
         return 0
     else :
         return 1
 
-def _local_recv(ssh, paths, dir_path, rec) :
+def _local_recv(ssh, paths, dir_path, rec, preserve) :
     command = "pyscp.py -f"
     if rec :
         command += "r"
+    if preserve :
+        command += "p"
     command = ' '.join((command, ' '.join(paths)))
     stdin, stdout, stderr = ssh.exec_command(command)
 
-    ret = tfr.recv(stdin, stdout, dir_path)
+    ret = tfr.recv(stdin, stdout, dir_path, preserve)
     if ret == error.E_OK or ret == error.E_END :
         return 0
     else :
         sys.stderr.write(error.errstr(ret))
         return 1
 
-def _remote_recv(dir_path, rec) :
-    ret = tfr.recv(sys.stdout, sys.stdin, dir_path)
+def _remote_recv(dir_path, rec, preserve) :
+    ret = tfr.recv(sys.stdout, sys.stdin, dir_path, preserve)
     if ret == error.E_OK or ret == error.E_END :
         return 0
     else :
@@ -56,18 +60,22 @@ def _build_arg_parser() :
     parser.add_argument("-f", action="store_true", default=None, help="source", dest="from_v")
     parser.add_argument("-t", action="store_true", default=None, help="destination", dest="to_v")
     parser.add_argument("-r", action="store_true", default=None, help="recursively copy directories", dest="rec")
+    parser.add_argument("-p", action="store_true", default=None, help="preserve access and modification times", dest="preserve")
     return parser
 
 if __name__ == "__main__" :
+    import os
+    os.stat_float_times(False)
+
     parser = _build_arg_parser()
     args = parser.parse_args(sys.argv[1:])
 
     # these should only be called by the remote
     ret = 0
     if args.from_v :
-        ret = _remote_send(args.paths, args.rec)
+        ret = _remote_send(args.paths, args.rec, args.preserve)
     elif args.to_v :
-        ret = _remote_recv(args.paths[0], args.rec)
+        ret = _remote_recv(args.paths[0], args.rec, args.preserve)
     else :
         paths = psr.parse_paths(args.paths)
         # only executed by the local
@@ -82,10 +90,10 @@ if __name__ == "__main__" :
 
         if send :
             # from local to remote
-            ret = _local_send(ssh, paths[:-1], paths[-1], args.rec)
+            ret = _local_send(ssh, paths[:-1], paths[-1], args.rec, args.preserve)
         else :
             # from remove to local
-            ret = _local_recv(ssh, paths[:-1], paths[-1], args.rec)
+            ret = _local_recv(ssh, paths[:-1], paths[-1], args.rec, args.preserve)
 
         ssh.close()
     exit(ret)

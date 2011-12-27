@@ -4,9 +4,17 @@ import os
 import sys
 import error
 
-# TODO: add T command
-def send_file(i, o, file_path) :
+def send_file(i, o, file_path, preserve) :
     stat = os.stat(file_path)
+
+    # command: touch
+    if preserve :
+        i.write('T%s 0 %s 0\n' % (stat.st_mtime, stat.st_atime))
+        i.flush()
+        ret = o.read(1)
+        if ret != '\0' :
+            return error.E_UNK
+
     bytes_to_send = stat.st_size
     mode = oct(stat.st_mode & 0x1FF)
     # command: sending file
@@ -40,9 +48,18 @@ def send_file(i, o, file_path) :
 
     return error.E_OK
 
-def send_dir(i, o, dir_path) :
+def send_dir(i, o, dir_path, preserve) :
     name = os.path.basename(dir_path)
     stat = os.stat(dir_path)
+
+    # command: touch
+    if preserve :
+        i.write('T%s 0 %s 0\n' % (stat.st_mtime, stat.st_atime))
+        i.flush()
+        ret = o.read(1)
+        if ret != '\0' :
+            return error.E_UNK
+
     mode = oct(stat.st_mode & 0x1FF)
     # command: sending directory
     i.write('D%s 0 %s\n' % (mode, name))
@@ -56,9 +73,9 @@ def send_dir(i, o, dir_path) :
     for it in items :
         p = os.path.join(dir_path, it)
         if os.path.isdir(p) :
-            ret = send_dir(i, o, p)
+            ret = send_dir(i, o, p, preserve)
         elif os.path.isfile(p) :
-            ret = send_file(i, o, p)
+            ret = send_file(i, o, p, preserve)
         if ret != error.E_OK :
             return ret
 
@@ -70,7 +87,7 @@ def send_dir(i, o, dir_path) :
 
     return error.E_OK
 
-def send(i, o, paths) :
+def send(i, o, paths, preserve) :
     # check if receiving end is ready
     ret = o.read(1)
     if ret != '\0' :
@@ -79,36 +96,55 @@ def send(i, o, paths) :
     ret = error.E_OK
     for p in paths :
         if os.path.isfile(p) :
-            ret = send_file(i, o, p)
+            ret = send_file(i, o, p, preserve)
         elif os.path.isdir(p) :
-            ret = send_dir(i, o, p)
+            ret = send_dir(i, o, p, preserve)
         if ret != error.E_OK :
             break
     return ret
 
-def recv_file_dir_or_end(i, o, target_dir) :
+def recv_file_dir_or_end(i, o, target_dir, preserve) :
     command = o.readline()
     if len(command) == 0 :
         return error.E_END # end of transfer ?
+    if command[0] == 'E' :
+        i.write('\0')
+        i.flush()
+        return error.E_END # end of directory
+    times = None
+    if preserve :
+        if command[0] == 'T' :
+            times = command[1:-1].split(' ', 3)
+            if len(times) != 4 :
+                i.write('\2')
+                i.flush()
+                return E_UNK
+            # ready tuple for utime (atime, mtime)
+            times = (int(times[2]), int(times[0]))
+            i.write('\0')
+            i.flush()
+            command = o.readline()
+            if len(command) == 0 : # should never happen
+                return error.E_UNK
+        else :
+            i.write('\2')
+            i.flush()
+            return E_UNK
     ret = error.E_UNK
     if command[0] == 'C' :
         i.write('\0')
         i.flush()
-        ret = recv_file(i, o, target_dir, command)
+        ret = recv_file(i, o, target_dir, command, preserve, times)
     elif command[0] == 'D' :
         i.write('\0')
         i.flush()
-        ret = recv_dir(i, o, target_dir, command)
-    elif command[0] == 'E' :
-        i.write('\0')
-        i.flush()
-        ret = error.E_END # end of directory
+        ret = recv_dir(i, o, target_dir, command, preserve, times)
     else :
         i.write('\2')
         i.flush()
     return ret
 
-def recv_file(i, o, target_dir, command) :
+def recv_file(i, o, target_dir, command, preserve, times) :
     # TODO: add regex check on the command format
     # ignore the '\n' at the end
     mode, size, path = command[1:-1].split(' ', 2)
@@ -134,6 +170,8 @@ def recv_file(i, o, target_dir, command) :
             break
     fo.close()
     os.chmod(file_path, mode)
+    if preserve :
+        os.utime(file_path, times)
     ret = o.read(1)
     if ret != '\0' :
         i.write('\2')
@@ -145,7 +183,7 @@ def recv_file(i, o, target_dir, command) :
 
     return error.E_OK
 
-def recv_dir(i, o, dir_path, command) :
+def recv_dir(i, o, dir_path, command, preserve, times) :
     # ignore the '\n' at the end
     mode, size, name = command[1:-1].split(' ', 2)
     mode = int(mode, 8)
@@ -158,18 +196,22 @@ def recv_dir(i, o, dir_path, command) :
         os.chmod(new_dir_path, mode)
 
     while True :
-        ret = recv_file_dir_or_end(i, o, new_dir_path)
+        ret = recv_file_dir_or_end(i, o, new_dir_path, preserve)
         if ret == error.E_END :
+            if preserve :
+                os.utime(new_dir_path, times)
             return error.E_OK
         if ret != error.E_OK :
+            if preserve :
+                os.utime(new_dir_path, times)
             return ret
 
-def recv(i, o, dir_path) :
+def recv(i, o, dir_path, preserve) :
     i.write('\0') # ready to receive
     i.flush()
 
     while True :
-        ret = recv_file_dir_or_end(i, o, dir_path)
+        ret = recv_file_dir_or_end(i, o, dir_path, preserve)
         if ret == error.E_END :
             return error.E_OK
         if ret != error.E_OK :
