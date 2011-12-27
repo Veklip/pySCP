@@ -51,7 +51,7 @@ def _remote_recv(dir_path, rec) :
         return 1
 
 def _build_arg_parser() :
-    parser = argparse.ArgumentParser(description="file transfer test script", prog="transfer_test")
+    parser = argparse.ArgumentParser(description="Python secure copy over ssh", prog="pyscp")
     parser.add_argument("paths", action="store", nargs="+", default=None, help="[[user@]host1:]file1 ... [[user@]host2:]file2")
     parser.add_argument("-f", action="store_true", default=None, help="source", dest="from_v")
     parser.add_argument("-t", action="store_true", default=None, help="destination", dest="to_v")
