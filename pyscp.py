@@ -16,7 +16,7 @@ def _local_send(ssh, paths, sink_path, rec, preserve) :
     command = ' '.join((command, sink_path))
     stdin, stdout, stderr = ssh.exec_command(command)
 
-    ret = tfr.send(stdin, stdout, paths, preserve)
+    ret = tfr.send(stdin, stdout, sys.stdout, paths, preserve)
     if ret == error.E_OK or ret == error.E_END :
         return 0
     else :
@@ -24,7 +24,7 @@ def _local_send(ssh, paths, sink_path, rec, preserve) :
         return 1
 
 def _remote_send(paths, rec, preserve) :
-    ret = tfr.send(sys.stdout, sys.stdin, paths, preserve)
+    ret = tfr.send(sys.stdout, sys.stdin, None, paths, preserve)
     if ret == error.E_OK or ret == error.E_END :
         return 0
     else :
@@ -39,7 +39,7 @@ def _local_recv(ssh, paths, dir_path, rec, preserve) :
     command = ' '.join((command, ' '.join(paths)))
     stdin, stdout, stderr = ssh.exec_command(command)
 
-    ret = tfr.recv(stdin, stdout, dir_path, preserve)
+    ret = tfr.recv(stdin, stdout, sys.stdout, dir_path, preserve)
     if ret == error.E_OK or ret == error.E_END :
         return 0
     else :
@@ -47,7 +47,7 @@ def _local_recv(ssh, paths, dir_path, rec, preserve) :
         return 1
 
 def _remote_recv(dir_path, rec, preserve) :
-    ret = tfr.recv(sys.stdout, sys.stdin, dir_path, preserve)
+    ret = tfr.recv(sys.stdout, sys.stdin, None, dir_path, preserve)
     if ret == error.E_OK or ret == error.E_END :
         return 0
     else :
