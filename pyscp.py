@@ -61,6 +61,7 @@ def _build_arg_parser() :
     parser.add_argument("-t", action="store_true", default=None, help="destination", dest="to_v")
     parser.add_argument("-r", action="store_true", default=None, help="recursively copy directories", dest="rec")
     parser.add_argument("-p", action="store_true", default=None, help="preserve access and modification times", dest="preserve")
+    parser.add_argument("-q", action="store_true", default=None, help="do not print any output", dest="quiet")
     return parser
 
 if __name__ == "__main__" :
@@ -88,12 +89,25 @@ if __name__ == "__main__" :
 
         ssh = con.get_connection(user, host)
 
+        if args.quiet :
+            null = open(os.devnull, 'r+')
+            local_out = sys.stdout
+            local_err = sys.stderr
+            sys.stdout = null
+            sys.stderr = null
+
         if send :
             # from local to remote
-            ret = _local_send(ssh, paths[:-1], paths[-1], args.rec, args.preserve)
+            ret = _local_send(ssh, paths[:-1], paths[-1],
+                              args.rec, args.preserve)
         else :
             # from remove to local
-            ret = _local_recv(ssh, paths[:-1], paths[-1], args.rec, args.preserve)
+            ret = _local_recv(ssh, paths[:-1], paths[-1],
+                              args.rec, args.preserve)
 
+        if args.quiet :
+            sys.stderr = local_err
+            sys.stdout = local_out
+            null.close()
         ssh.close()
     exit(ret)
