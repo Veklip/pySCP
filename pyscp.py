@@ -1,5 +1,8 @@
 #!/usr/bin/python
 
+import warnings as w
+w.filterwarnings('ignore', '.*RandomPool.*', DeprecationWarning, '.*randpool', 0)
+
 import sys
 import argparse
 import parser as psr
