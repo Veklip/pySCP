@@ -63,6 +63,29 @@ def _print_progress(p, file_name, sent, size, time_elapsed) :
     p.write(line)
     p.flush()
 
+def _send_file_data(i, progress, file_path, size) :
+    # data transfer starts right after C command
+    fo = open(file_path, 'rb')
+    start = time.time()
+    bytes_to_send = size
+    while True :
+        if bytes_to_send < 4096 :
+            chunk = bytes_to_send
+        else :
+            chunk = 4096
+        buf = fo.read(chunk)
+        if len(buf) :
+            i.write(buf)
+            i.flush()
+            bytes_to_send -= len(buf)
+        if progress is not None :
+            _print_progress(progress, os.path.basename(file_path),
+                            size - bytes_to_send, size,
+                            time.time() - start)
+        if bytes_to_send <= 0 :
+            break
+    fo.close()
+
 def send_file(i, o, progress, file_path, preserve) :
     stat = os.stat(file_path)
 
@@ -74,35 +97,15 @@ def send_file(i, o, progress, file_path, preserve) :
         if ret != '\0' :
             return error.E_UNK
 
-    bytes_to_send = stat.st_size
     mode = oct(stat.st_mode & 0x1FF)
     # command: sending file
-    i.write('C%s %ld %s\n' % (mode, bytes_to_send, os.path.basename(file_path)))
+    i.write('C%s %ld %s\n' % (mode, stat.st_size, os.path.basename(file_path)))
     i.flush()
     ret = o.read(1)
     if ret != '\0' :
         return error.E_UNK
 
-    # data transfer starts right after C command
-    fo = open(file_path, 'rb')
-    start = time.time()
-    while True :
-        if bytes_to_send < 4096 :
-            chunk = bytes_to_send
-        else :
-            chunk = 4096
-        buf = fo.read(chunk)
-        if len(buf) :
-            i.write(buf)
-            i.flush()
-            bytes_to_send = bytes_to_send - len(buf)
-        if progress is not None :
-            _print_progress(progress, os.path.basename(file_path),
-                            stat.st_size - bytes_to_send, stat.st_size,
-                            time.time() - start)
-        if bytes_to_send <= 0 :
-            break
-    fo.close()
+    _send_file_data(i, progress, file_path, stat.st_size)
     # data transfer end
     i.write('\0')
     i.flush()
