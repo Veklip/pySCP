@@ -10,47 +10,51 @@ import connector as con
 import error
 import transfer as tfr
 
-def _local_send(ssh, paths, sink_path, rec, preserve) :
+def _local_send(ssh, paths, sink_path, rec, preserve, check_hash) :
     command = "pyscp.py -t"
     if rec :
         command += "r"
     if preserve :
         command += "p"
+    if check_hash :
+        command += " --check_hash"
     command = ' '.join((command, sink_path))
     stdin, stdout, stderr = ssh.exec_command(command)
 
-    ret = tfr.send(stdin, stdout, sys.stdout, paths, preserve)
+    ret = tfr.send(stdin, stdout, sys.stdout, paths, preserve, check_hash)
     if ret == error.E_OK or ret == error.E_END :
         return 0
     else :
         sys.stderr.write(stderr.readline())
         return 1
 
-def _remote_send(paths, rec, preserve) :
-    ret = tfr.send(sys.stdout, sys.stdin, None, paths, preserve)
+def _remote_send(paths, rec, preserve, check_hash) :
+    ret = tfr.send(sys.stdout, sys.stdin, None, paths, preserve, check_hash)
     if ret == error.E_OK or ret == error.E_END :
         return 0
     else :
         return 1
 
-def _local_recv(ssh, paths, dir_path, rec, preserve) :
+def _local_recv(ssh, paths, dir_path, rec, preserve, check_hash) :
     command = "pyscp.py -f"
     if rec :
         command += "r"
     if preserve :
         command += "p"
+    if check_hash :
+        command += " --check_hash"
     command = ' '.join((command, ' '.join(paths)))
     stdin, stdout, stderr = ssh.exec_command(command)
 
-    ret = tfr.recv(stdin, stdout, sys.stdout, dir_path, preserve)
+    ret = tfr.recv(stdin, stdout, sys.stdout, dir_path, preserve, check_hash)
     if ret == error.E_OK or ret == error.E_END :
         return 0
     else :
         sys.stderr.write(error.errstr(ret))
         return 1
 
-def _remote_recv(dir_path, rec, preserve) :
-    ret = tfr.recv(sys.stdout, sys.stdin, None, dir_path, preserve)
+def _remote_recv(dir_path, rec, preserve, check_hash) :
+    ret = tfr.recv(sys.stdout, sys.stdin, None, dir_path, preserve, check_hash)
     if ret == error.E_OK or ret == error.E_END :
         return 0
     else :
@@ -65,6 +69,7 @@ def _build_arg_parser() :
     parser.add_argument("-r", action="store_true", default=None, help="recursively copy directories", dest="rec")
     parser.add_argument("-p", action="store_true", default=None, help="preserve access and modification times", dest="preserve")
     parser.add_argument("-q", action="store_true", default=None, help="do not print any output", dest="quiet")
+    parser.add_argument("--check_hash", action="store_true", default=None, help="use SHA1 to check if destination file is the same as source file")
     return parser
 
 if __name__ == "__main__" :
@@ -77,9 +82,11 @@ if __name__ == "__main__" :
     # these should only be called by the remote
     ret = 0
     if args.from_v :
-        ret = _remote_send(args.paths, args.rec, args.preserve)
+        ret = _remote_send(args.paths, args.rec, args.preserve,
+                           args.check_hash)
     elif args.to_v :
-        ret = _remote_recv(args.paths[0], args.rec, args.preserve)
+        ret = _remote_recv(args.paths[0], args.rec, args.preserve,
+                           args.check_hash)
     else :
         paths = psr.parse_paths(args.paths)
         # only executed by the local
@@ -102,11 +109,11 @@ if __name__ == "__main__" :
         if send :
             # from local to remote
             ret = _local_send(ssh, paths[:-1], paths[-1],
-                              args.rec, args.preserve)
+                              args.rec, args.preserve, args.check_hash)
         else :
             # from remove to local
             ret = _local_recv(ssh, paths[:-1], paths[-1],
-                              args.rec, args.preserve)
+                              args.rec, args.preserve, args.check_hash)
 
         if args.quiet :
             sys.stderr = local_err
