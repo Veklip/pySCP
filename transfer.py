@@ -86,6 +86,28 @@ def _send_file_data(i, progress, file_path, size) :
             break
     fo.close()
 
+def _recv_file_data(o, progress, file_path, size) :
+    fo = open(file_path, 'wb')
+    start = time.time()
+    bytes_to_recv = size
+    while True :
+        if bytes_to_recv < 4096 :
+            chunk = bytes_to_recv
+        else :
+            chunk = 4096
+        buf = o.read(chunk)
+        if len(buf) :
+            fo.write(buf)
+            bytes_to_recv -= len(buf)
+        if progress is not None :
+            _print_progress(progress, os.path.basename(file_path),
+                            size - bytes_to_recv, size,
+                            time.time() - start)
+        if bytes_to_recv <= 0 :
+            fo.flush()
+            break
+    fo.close()
+
 def send_file(i, o, progress, file_path, preserve) :
     stat = os.stat(file_path)
 
@@ -222,26 +244,7 @@ def recv_file(i, o, progress, target_dir, command, preserve, times) :
         file_path = os.path.join(target_dir, path)
     else :
         file_path = target_dir
-    fo = open(file_path, 'wb')
-    full_size = size
-    start = time.time()
-    while True :
-        if size < 4096 :
-            chunk = size
-        else :
-            chunk = 4096
-        buf = o.read(chunk)
-        if len(buf) :
-            fo.write(buf)
-            size = size - len(buf)
-        if progress is not None :
-            _print_progress(progress, os.path.basename(file_path),
-                            full_size - size, full_size,
-                            time.time() - start)
-        if size <= 0 :
-            fo.flush()
-            break
-    fo.close()
+    _recv_file_data(o, progress, file_path, size)
     os.chmod(file_path, mode)
     if preserve :
         os.utime(file_path, times)
