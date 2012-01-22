@@ -70,6 +70,7 @@ def _build_arg_parser() :
     parser.add_argument("-p", action="store_true", default=None, help="preserve access and modification times", dest="preserve")
     parser.add_argument("-q", action="store_true", default=None, help="do not print any output", dest="quiet")
     parser.add_argument("--check_hash", action="store_true", default=None, help="use SHA1 to check if destination file is the same as source file")
+    parser.add_argument("-P", action="store", default=22, type=int, help="port on remote host to connect to", dest="port")
     return parser
 
 if __name__ == "__main__" :
@@ -97,7 +98,7 @@ if __name__ == "__main__" :
         if len(host) == 0 :
             exit(1)
 
-        ssh = con.get_connection(user, host)
+        ssh = con.get_connection(user, host, args.port)
 
         if args.quiet :
             null = open(os.devnull, 'r+')
