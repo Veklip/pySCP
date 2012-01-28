@@ -98,7 +98,10 @@ if __name__ == "__main__" :
         if len(host) == 0 :
             exit(1)
 
-        ssh = con.get_connection(user, host, args.port)
+        try :
+            ssh = con.get_connection(user, host, args.port)
+        except Exception :
+            exit(1)
 
         if args.quiet :
             null = open(os.devnull, 'r+')
