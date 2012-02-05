@@ -71,6 +71,7 @@ def _build_arg_parser() :
     parser.add_argument("-q", action="store_true", default=None, help="do not print any output", dest="quiet")
     parser.add_argument("--check_hash", action="store_true", default=None, help="use SHA1 to check if destination file is the same as source file")
     parser.add_argument("-P", action="store", default=22, type=int, help="port on remote host to connect to", dest="port")
+    parser.add_argument("-i", action="append", default=None, help="private key for public key authentication", metavar="identity_file", dest="pkeys")
     return parser
 
 if __name__ == "__main__" :
@@ -96,6 +97,9 @@ if __name__ == "__main__" :
             exit(1)
         send, user, host, paths = psr.analyse_paths(paths)
         if len(host) == 0 :
+            exit(1)
+
+        if not psr.check_pkeys(args.pkeys) :
             exit(1)
 
         try :

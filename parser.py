@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+import os
 import sys
 import getpass
 
@@ -45,3 +46,13 @@ def analyse_paths(paths) :
             return False, user, host, stripped
         else :
             return False, getpass.getuser(), host, stripped
+
+def check_pkeys(pkey_files) :
+    if pkey_files is None :
+        return True
+
+    for key in pkey_files :
+        if not os.path.exists(key) :
+            sys.stderr.write("Key file '%s' doesn't exist\n" % key)
+            return False
+    return True
