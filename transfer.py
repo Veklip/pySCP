@@ -369,8 +369,13 @@ def recv_dir(i, o, progress, dir_path, command, preserve, times, check_hash) :
             return ret
 
 def recv(i, o, progress, dir_path, preserve, check_hash) :
-    i.write('\0') # ready to receive
-    i.flush()
+    if not os.path.exists(os.path.dirname(dir_path)) :
+        i.write('\2')
+        i.flush()
+        return error.E_MIS
+    else :
+        i.write('\0')
+        i.flush()
 
     while True :
         ret = recv_file_dir_or_end(i, o, progress, dir_path, preserve, check_hash)
