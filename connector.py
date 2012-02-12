@@ -69,7 +69,18 @@ def get_connection(user, host, dport=22, pkeys=None) :
         except paramiko.AuthenticationException :
             pass
     else :
-        if not _connect_with_password(ssh, user, host, dport) :
+        try :
+            ssh.connect(host, port=dport, username=user, password='')
+        except paramiko.BadAuthenticationType as ex :
+            if 'password' in ex.allowed_types or \
+               'keyboard-interactive' in ex.allowed_types :
+                if not _connect_with_password(ssh, user, host, dport) :
+                    raise Exception("Cannot connect")
+            else :
+                sys.stderr.write("Bad Authentication: allowed types: %s\n" \
+                                 % (','.join(ex.allowed_types)))
+                raise
+        except paramiko.AuthenticationException :
             raise Exception("Cannot connect")
 
     return ssh
