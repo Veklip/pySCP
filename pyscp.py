@@ -21,7 +21,7 @@ def _local_send(ssh, paths, sink_path, rec, preserve, check_hash) :
     command = ' '.join((command, sink_path))
     stdin, stdout, stderr = ssh.exec_command(command)
 
-    ret = tfr.send(stdin, stdout, sys.stdout, paths, preserve, check_hash)
+    ret = tfr.send(stdin, stdout, sys.stderr, sys.stdout, paths, preserve, check_hash)
     if ret == error.E_OK or ret == error.E_END :
         return 0
     else :
@@ -29,7 +29,7 @@ def _local_send(ssh, paths, sink_path, rec, preserve, check_hash) :
         return 1
 
 def _remote_send(paths, rec, preserve, check_hash) :
-    ret = tfr.send(sys.stdout, sys.stdin, None, paths, preserve, check_hash)
+    ret = tfr.send(sys.stdout, sys.stdin, sys.stderr, None, paths, preserve, check_hash)
     if ret == error.E_OK or ret == error.E_END :
         return 0
     else :
@@ -46,19 +46,18 @@ def _local_recv(ssh, paths, dir_path, rec, preserve, check_hash) :
     command = ' '.join((command, ' '.join(paths)))
     stdin, stdout, stderr = ssh.exec_command(command)
 
-    ret = tfr.recv(stdin, stdout, sys.stdout, dir_path, preserve, check_hash)
+    ret = tfr.recv(stdin, stdout, sys.stderr, sys.stdout, dir_path, preserve, check_hash)
     if ret == error.E_OK or ret == error.E_END :
         return 0
     else :
-        sys.stderr.write(error.errstr(ret))
+        sys.stderr.write(stderr.readline())
         return 1
 
 def _remote_recv(dir_path, rec, preserve, check_hash) :
-    ret = tfr.recv(sys.stdout, sys.stdin, None, dir_path, preserve, check_hash)
+    ret = tfr.recv(sys.stdout, sys.stdin, sys.stderr, None, dir_path, preserve, check_hash)
     if ret == error.E_OK or ret == error.E_END :
         return 0
     else :
-        sys.stderr.write(error.errstr(ret))
         return 1
 
 def _build_arg_parser() :

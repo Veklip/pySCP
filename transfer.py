@@ -128,7 +128,7 @@ def _calculate_hash(file_path, size) :
     fo.close()
     return sha.hexdigest()
 
-def send_file(i, o, progress, file_path, preserve, check_hash) :
+def send_file(i, o, e, progress, file_path, preserve, check_hash) :
     stat = os.stat(file_path)
 
     # command: touch
@@ -137,6 +137,7 @@ def send_file(i, o, progress, file_path, preserve, check_hash) :
         i.flush()
         ret = o.read(1)
         if ret != '\0' :
+            e.write(o.readline())
             return error.E_UNK
 
     mode = oct(stat.st_mode & 0x1FF)
@@ -145,6 +146,7 @@ def send_file(i, o, progress, file_path, preserve, check_hash) :
     i.flush()
     ret = o.read(1)
     if ret != '\0' :
+        e.write(o.readline())
         return error.E_UNK
 
     seek = 0
@@ -154,12 +156,14 @@ def send_file(i, o, progress, file_path, preserve, check_hash) :
         command = o.readline()
         if len(command) == 0 or command[0] != 'H' :
             i.write('\2')
+            i.write(error.errstr(error.E_UNK))
             i.flush()
             return error.E_UNK
         hash_str, file_size = command[1:-1].split(' ', 1)
         file_size = int(file_size)
         if len(hash_str) != 40 or file_size < 0 :
             i.write('\2')
+            i.write(error.errstr(error.E_FMT))
             i.flush()
             return error.E_FMT
         i.write('\0')
@@ -178,6 +182,7 @@ def send_file(i, o, progress, file_path, preserve, check_hash) :
         i.flush()
         ret = o.read(1)
         if ret != '\0' :
+            e.write(o.readline())
             return error.E_UNK
 
     _send_file_data(i, progress, file_path, stat.st_size, seek)
@@ -186,11 +191,12 @@ def send_file(i, o, progress, file_path, preserve, check_hash) :
     i.flush()
     ret = o.read(1)
     if ret != '\0' :
+        e.write(o.readline())
         return error.E_TFR
 
     return error.E_OK
 
-def send_dir(i, o, progress, dir_path, preserve, check_hash) :
+def send_dir(i, o, e, progress, dir_path, preserve, check_hash) :
     name = os.path.basename(dir_path)
     stat = os.stat(dir_path)
 
@@ -200,6 +206,7 @@ def send_dir(i, o, progress, dir_path, preserve, check_hash) :
         i.flush()
         ret = o.read(1)
         if ret != '\0' :
+            e.write(o.readline())
             return error.E_UNK
 
     mode = oct(stat.st_mode & 0x1FF)
@@ -208,6 +215,7 @@ def send_dir(i, o, progress, dir_path, preserve, check_hash) :
     i.flush()
     ret = o.read(1)
     if ret != '\0' :
+        e.write(o.readline())
         return error.E_UNK
 
     items = os.listdir(dir_path)
@@ -215,9 +223,9 @@ def send_dir(i, o, progress, dir_path, preserve, check_hash) :
     for it in items :
         p = os.path.join(dir_path, it)
         if os.path.isdir(p) :
-            ret = send_dir(i, o, progress, p, preserve, check_hash)
+            ret = send_dir(i, o, e, progress, p, preserve, check_hash)
         elif os.path.isfile(p) :
-            ret = send_file(i, o, progress, p, preserve, check_hash)
+            ret = send_file(i, o, e, progress, p, preserve, check_hash)
         if ret != error.E_OK :
             return ret
 
@@ -225,27 +233,29 @@ def send_dir(i, o, progress, dir_path, preserve, check_hash) :
     i.flush();
     ret = o.read(1)
     if ret != '\0' :
+        e.write(o.readline())
         return error.E_UNK
 
     return error.E_OK
 
-def send(i, o, progress, paths, preserve, check_hash) :
+def send(i, o, e, progress, paths, preserve, check_hash) :
     # check if receiving end is ready
     ret = o.read(1)
     if ret != '\0' :
+        e.write(o.readline())
         return error.E_RDY
 
     ret = error.E_OK
     for p in paths :
         if os.path.isfile(p) :
-            ret = send_file(i, o, progress, p, preserve, check_hash)
+            ret = send_file(i, o, e, progress, p, preserve, check_hash)
         elif os.path.isdir(p) :
-            ret = send_dir(i, o, progress, p, preserve, check_hash)
+            ret = send_dir(i, o, e, progress, p, preserve, check_hash)
         if ret != error.E_OK :
             break
     return ret
 
-def recv_file_dir_or_end(i, o, progress, target_dir, preserve, check_hash) :
+def recv_file_dir_or_end(i, o, e, progress, target_dir, preserve, check_hash) :
     command = o.readline()
     if len(command) == 0 :
         return error.E_END # end of transfer ?
@@ -259,6 +269,7 @@ def recv_file_dir_or_end(i, o, progress, target_dir, preserve, check_hash) :
             times = command[1:-1].split(' ', 3)
             if len(times) != 4 :
                 i.write('\2')
+                i.write(error.errstr(error.E_UNK))
                 i.flush()
                 return E_UNK
             # ready tuple for utime (atime, mtime)
@@ -267,28 +278,33 @@ def recv_file_dir_or_end(i, o, progress, target_dir, preserve, check_hash) :
             i.flush()
             command = o.readline()
             if len(command) == 0 : # should never happen
+                i.write('\2')
+                i.write(error.errstr(error.E_UNK))
+                i.flush()
                 return error.E_UNK
         else :
             i.write('\2')
+            i.write(error.errstr(error.E_UNK))
             i.flush()
             return E_UNK
     ret = error.E_UNK
     if command[0] == 'C' :
         i.write('\0')
         i.flush()
-        ret = recv_file(i, o, progress, target_dir, command,
+        ret = recv_file(i, o, e, progress, target_dir, command,
                         preserve, times, check_hash)
     elif command[0] == 'D' :
         i.write('\0')
         i.flush()
-        ret = recv_dir(i, o, progress, target_dir, command,
+        ret = recv_dir(i, o, e, progress, target_dir, command,
                        preserve, times, check_hash)
     else :
         i.write('\2')
+        i.write(error.errstr(ret))
         i.flush()
     return ret
 
-def recv_file(i, o, progress, target_dir, command, preserve, times, check_hash) :
+def recv_file(i, o, e, progress, target_dir, command, preserve, times, check_hash) :
     # TODO: add regex check on the command format
     # ignore the '\n' at the end
     mode, size, path = command[1:-1].split(' ', 2)
@@ -313,18 +329,21 @@ def recv_file(i, o, progress, target_dir, command, preserve, times, check_hash) 
         i.flush()
         ret = o.read(1)
         if ret != '\0' :
+            e.write(o.readline())
             return error.E_UNK
 
         # wait for H command
         command = o.readline()
         if len(command) == 0 or command[0] != 'H' :
             i.write('\2')
+            i.write(error.errstr(error.E_UNK))
             i.flush()
             return error.E_UNK
         hash_str, seek = command[1:-1].split(' ', 1)
         seek = int(seek)
         if len(hash_str) != 40 or seek < 0 :
             i.write('\2')
+            i.write(error.errstr(error.E_FMT))
             i.flush()
             return error.E_FMT
         i.write('\0')
@@ -337,6 +356,7 @@ def recv_file(i, o, progress, target_dir, command, preserve, times, check_hash) 
     ret = o.read(1)
     if ret != '\0' :
         i.write('\2')
+        i.write(error.errstr(error.E_TFR))
         i.flush()
         return error.E_TFR
     else :
@@ -345,7 +365,7 @@ def recv_file(i, o, progress, target_dir, command, preserve, times, check_hash) 
 
     return error.E_OK
 
-def recv_dir(i, o, progress, dir_path, command, preserve, times, check_hash) :
+def recv_dir(i, o, e, progress, dir_path, command, preserve, times, check_hash) :
     # ignore the '\n' at the end
     mode, size, name = command[1:-1].split(' ', 2)
     mode = int(mode, 8)
@@ -358,7 +378,7 @@ def recv_dir(i, o, progress, dir_path, command, preserve, times, check_hash) :
         os.chmod(new_dir_path, mode)
 
     while True :
-        ret = recv_file_dir_or_end(i, o, progress, new_dir_path, preserve, check_hash)
+        ret = recv_file_dir_or_end(i, o, e, progress, new_dir_path, preserve, check_hash)
         if ret == error.E_END :
             if preserve :
                 os.utime(new_dir_path, times)
@@ -368,9 +388,10 @@ def recv_dir(i, o, progress, dir_path, command, preserve, times, check_hash) :
                 os.utime(new_dir_path, times)
             return ret
 
-def recv(i, o, progress, dir_path, preserve, check_hash) :
+def recv(i, o, e, progress, dir_path, preserve, check_hash) :
     if not os.path.exists(os.path.dirname(dir_path)) :
         i.write('\2')
+        i.write(error.errstr(error.E_MIS))
         i.flush()
         return error.E_MIS
     else :
@@ -378,7 +399,7 @@ def recv(i, o, progress, dir_path, preserve, check_hash) :
         i.flush()
 
     while True :
-        ret = recv_file_dir_or_end(i, o, progress, dir_path, preserve, check_hash)
+        ret = recv_file_dir_or_end(i, o, e, progress, dir_path, preserve, check_hash)
         if ret == error.E_END :
             return error.E_OK
         if ret != error.E_OK :
