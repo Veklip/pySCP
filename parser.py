@@ -27,12 +27,12 @@ def analyse_paths(paths) :
 
     for i in range(1, len(paths) - 1) :
         if user != paths[i]['user'] or host != paths[i]['host'] :
-            print >> sys.stderr, "Error: all source paths need to be from the same user and host"
+            sys.stderr.write("Error: all source paths need to be from the same user and host\n")
             return False, "", "", []
         stripped.append(paths[i]['path'])
 
     if host == paths[-1]['host'] :
-        print >> sys.stderr, "Error: source and sink files need to be with different hosts"
+        sys.stderr.write("Error: source and sink files need to be with different hosts\n")
         return False, "", "", []
     stripped.append(paths[-1]['path'])
 
