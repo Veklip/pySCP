@@ -103,7 +103,8 @@ if __name__ == "__main__" :
 
         try :
             ssh = con.get_connection(user, host, args.port)
-        except Exception :
+        except Exception as ex :
+            sys.stderr.write(str(ex) + '\n')
             exit(1)
 
         if args.quiet :
