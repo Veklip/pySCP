@@ -17,20 +17,20 @@ def _load_pkey(key_file) :
             try :
                 pkey = paramiko.RSAKey.from_private_key_file(key_file)
             except paramiko.PasswordRequiredException :
-                sys.stderr.write("RSA key file '%s' requires a passphrase.\n" % key_file)
+                sys.stderr.write("RSA key file '{0}' requires a passphrase.\n".format(key_file))
                 passwd = getpass.getpass()
                 pkey = paramiko.RSAKey.from_private_key_file(key_file, passwd)
         elif "DSA" in line :
             try :
                 pkey = paramiko.DSSKey.from_private_key_file(key_file)
             except paramiko.PasswordRequiredException :
-                sys.stderr.write("DSA key file '%s' requires a passphrase.\n" % key_file)
+                sys.stderr.write("DSA key file '{0}' requires a passphrase.\n".format(key_file))
                 passwd = getpass.getpass()
                 pkey = paramiko.DSSKey.from_private_key_file(key_file, passwd)
         return pkey
     except paramiko.SSHException as sshex :
-        sys.stderr.write("Key file '%s' is invalid: %s\n" \
-                         % (key_file, ' '.join(sshex.args)))
+        sys.stderr.write("Key file '{0}' is invalid: {1}\n"
+                         .format(key_file, ' '.join(sshex.args)))
         return None
 
 def _connect_with_password(ssh, user, host, dport=22) :
@@ -46,8 +46,8 @@ def _connect_with_password(ssh, user, host, dport=22) :
                 sys.stderr.write("Wrong password.\n")
                 triesLeft -= 1
                 continue
-            sys.stderr.write("Bad Authentication: allowed types: %s\n" \
-                             % (','.join(ex.allowed_types)))
+            sys.stderr.write("Bad Authentication: allowed types: {0}\n" \
+                             .format(','.join(ex.allowed_types)))
             return False
     else :
         return False
@@ -77,8 +77,8 @@ def get_connection(user, host, dport=22, pkeys=None) :
                 if not _connect_with_password(ssh, user, host, dport) :
                     raise Exception("Cannot connect")
             else :
-                sys.stderr.write("Bad Authentication: allowed types: %s\n" \
-                                 % (','.join(ex.allowed_types)))
+                sys.stderr.write("Bad Authentication: allowed types: {0}\n" \
+                                 .format(','.join(ex.allowed_types)))
                 raise
         except paramiko.AuthenticationException :
             raise Exception("Cannot connect")

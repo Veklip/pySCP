@@ -25,7 +25,7 @@ def _print_progress(p, file_name, sent, size, time_elapsed) :
     bar = '=' * (actual_bar_width - 1)
     bar += '>' if percent < 1.0 else '='
     bar += ' ' * (bar_width - 5 - len(bar))
-    bar += ' %3d%%' % int(math.floor(percent * 100))
+    bar += ' {0: >4.0%}'.format(percent)
 
     size_mark = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB','ZB', 'YB']
     mark_index = 0
@@ -35,12 +35,12 @@ def _print_progress(p, file_name, sent, size, time_elapsed) :
             break
         sent_bytes /= 1024.0
         mark_index += 1
-    sent_str = '%6.2lf%2s' % (round(sent_bytes, 2), size_mark[mark_index])
+    sent_str = '{0: >6.2f}{1: >2s}'.format(round(sent_bytes, 2), size_mark[mark_index])
 
     if time_elapsed > 0.0 :
         min_elapsed = time_elapsed / 60
         sec_elapsed = time_elapsed % 60
-        time_str = '%3d:%02d' % (min_elapsed, sec_elapsed)
+        time_str = '{0: >3d}:{1:02d}'.format(int(min_elapsed), int(sec_elapsed))
 
         mark_index = 0
         speed = sent / time_elapsed
@@ -49,16 +49,16 @@ def _print_progress(p, file_name, sent, size, time_elapsed) :
                 break
             speed /= 1024.0
             mark_index += 1
-        speed_str = '%6.2lf%2s/s' % (round(speed, 2), size_mark[mark_index])
+        speed_str = '{0: >6.2f}{1: >2s}/s'.format(round(speed, 2), size_mark[mark_index])
     else :
         time_str = '---:--'
         speed_str = '---.-- B/s'
 
     # build line format
-    line_format = '%-' + str(file_width) + 's %s %s %s %s'
-    line = line_format % (file_name[:file_width], bar[:bar_width],
-                          sent_str[:size_width], speed_str[:speed_width],
-                          time_str[:time_width])
+    line_format = '{0: <' + str(file_width) + 's} {1:s} {2:s} {3:s} {4:s}'
+    line = line_format.format(file_name[:file_width], bar[:bar_width],
+                              sent_str[:size_width], speed_str[:speed_width],
+                              time_str[:time_width])
     line += '\r' if percent < 1.0 else '\n'
     p.write(line)
     p.flush()
@@ -133,16 +133,16 @@ def send_file(i, o, e, progress, file_path, preserve, check_hash) :
 
     # command: touch
     if preserve :
-        i.write('T%s 0 %s 0\n' % (stat.st_mtime, stat.st_atime))
+        i.write('T{0:d} 0 {1:d} 0\n'.format(stat.st_mtime, stat.st_atime))
         i.flush()
         ret = o.read(1)
         if ret != '\0' :
             e.write(o.readline())
             return error.E_UNK
 
-    mode = oct(stat.st_mode & 0x1FF)
+    mode = stat.st_mode & 0x1FF
     # command: sending file
-    i.write('C%s %ld %s\n' % (mode, stat.st_size, os.path.basename(file_path)))
+    i.write('C{0:0=4o} {1:d} {2:s}\n'.format(mode, stat.st_size, os.path.basename(file_path)))
     i.flush()
     ret = o.read(1)
     if ret != '\0' :
@@ -178,7 +178,7 @@ def send_file(i, o, e, progress, file_path, preserve, check_hash) :
 
         # command: hash ack
         # return 0 hash and seek value
-        i.write('H%s %ld\n' % ('0' * 40, seek))
+        i.write('H{0:40s} {1:d}\n'.format('0' * 40, seek))
         i.flush()
         ret = o.read(1)
         if ret != '\0' :
@@ -202,16 +202,16 @@ def send_dir(i, o, e, progress, dir_path, preserve, check_hash) :
 
     # command: touch
     if preserve :
-        i.write('T%s 0 %s 0\n' % (stat.st_mtime, stat.st_atime))
+        i.write('T{0:d} 0 {1:d} 0\n'.format(stat.st_mtime, stat.st_atime))
         i.flush()
         ret = o.read(1)
         if ret != '\0' :
             e.write(o.readline())
             return error.E_UNK
 
-    mode = oct(stat.st_mode & 0x1FF)
+    mode = stat.st_mode & 0x1FF
     # command: sending directory
-    i.write('D%s 0 %s\n' % (mode, name))
+    i.write('D{0:0=4o} 0 {1:s}\n'.format(mode, name))
     i.flush()
     ret = o.read(1)
     if ret != '\0' :
@@ -325,7 +325,7 @@ def recv_file(i, o, e, progress, target_dir, command, preserve, times, check_has
         else :
             file_size = 0
             hash_str = '0' * 40
-        i.write('H%s %ld\n' % (hash_str, file_size))
+        i.write('H{0:40s} {1:d}\n'.format(hash_str, file_size))
         i.flush()
         ret = o.read(1)
         if ret != '\0' :

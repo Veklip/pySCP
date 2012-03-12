@@ -53,6 +53,6 @@ def check_pkeys(pkey_files) :
 
     for key in pkey_files :
         if not os.path.exists(key) :
-            sys.stderr.write("Key file '%s' doesn't exist\n" % key)
+            sys.stderr.write("Key file '{0}' doesn't exist\n".format(key))
             return False
     return True
