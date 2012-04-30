@@ -77,8 +77,6 @@ def get_connection(user, host, dport=22, pkeys=None) :
                 if not _connect_with_password(ssh, user, host, dport) :
                     raise Exception("Cannot connect")
             else :
-                sys.stderr.write("Bad Authentication: allowed types: {0}\n" \
-                                 .format(','.join(ex.allowed_types)))
                 raise
         except paramiko.AuthenticationException :
             raise Exception("Cannot connect")
