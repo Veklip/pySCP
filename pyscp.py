@@ -102,7 +102,7 @@ if __name__ == "__main__" :
             exit(1)
 
         try :
-            ssh = con.get_connection(user, host, args.port)
+            ssh = con.get_connection(user, host, args.port, args.pkeys)
         except Exception as ex :
             sys.stderr.write(str(ex) + '\n')
             exit(1)
