@@ -16,8 +16,8 @@ def _local_send(ssh, paths, sink_path, rec, preserve, check_hash) :
         command += "r"
     if preserve :
         command += "p"
-    if check_hash :
-        command += " --check-hash"
+    if not check_hash :
+        command += " --disable-hash-check"
     command = ' '.join((command, sink_path))
     stdin, stdout, stderr = ssh.exec_command(command)
 
@@ -41,8 +41,8 @@ def _local_recv(ssh, paths, dir_path, rec, preserve, check_hash) :
         command += "r"
     if preserve :
         command += "p"
-    if check_hash :
-        command += " --check-hash"
+    if not check_hash :
+        command += " --disable-hash-check"
     command = ' '.join((command, ' '.join(paths)))
     stdin, stdout, stderr = ssh.exec_command(command)
 
@@ -68,7 +68,7 @@ def _build_arg_parser() :
     parser.add_argument("-r", action="store_true", default=None, help="recursively copy directories", dest="rec")
     parser.add_argument("-p", action="store_true", default=None, help="preserve access and modification times", dest="preserve")
     parser.add_argument("-q", action="store_true", default=None, help="do not print any output", dest="quiet")
-    parser.add_argument("--check-hash", action="store_true", default=None, help="use SHA1 to check if destination file is the same as source file", dest="check_hash")
+    parser.add_argument("--disable-hash-check", action="store_false", default=True, help="disable SHA1 comparison between source and destination files", dest="check_hash")
     parser.add_argument("-P", action="store", default=22, type=int, help="port on remote host to connect to", dest="port")
     parser.add_argument("-i", action="append", default=None, help="private key for public key authentication", metavar="identity_file", dest="pkeys")
     return parser
