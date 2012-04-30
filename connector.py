@@ -29,8 +29,7 @@ def _load_pkey(key_file) :
                 pkey = paramiko.DSSKey.from_private_key_file(key_file, passwd)
         return pkey
     except paramiko.SSHException as sshex :
-        sys.stderr.write("Key file '{0}' is invalid: {1}\n"
-                         .format(key_file, ' '.join(sshex.args)))
+        sys.stderr.write("Key file '{0}' is invalid: {1}\n".format(key_file, str(sshex)))
         return None
 
 def _connect_with_password(ssh, user, host, dport=22) :
