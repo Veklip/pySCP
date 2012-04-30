@@ -63,6 +63,8 @@ def get_connection(user, host, dport=22, pkeys=None) :
     for key in _pkeys :
         try :
             lkey = _load_pkey(key)
+            if lkey is None :
+                continue
             ssh.connect(host, port=dport, username=user, pkey=lkey)
             break
         except paramiko.AuthenticationException :
