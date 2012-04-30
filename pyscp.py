@@ -89,7 +89,7 @@ if __name__ == "__main__" :
     args = parser.parse_args(sys.argv[1:])
 
     # these should only be called by the remote
-    ret = 0
+    ret = 1
     if args.from_v :
         ret = _remote_send(args.paths, args.rec, args.preserve,
                            args.check_hash)
