@@ -19,7 +19,11 @@ def _local_send(ssh, paths, sink_path, rec, preserve, check_hash) :
     if not check_hash :
         command += " --disable-hash-check"
     command = ' '.join((command, sink_path))
-    stdin, stdout, stderr = ssh.exec_command(command)
+    try :
+        stdin, stdout, stderr = ssh.exec_command(command)
+    except Exception as ex :
+        sys.stderr.write(str(ex))
+        return 1
 
     ret = tfr.send(stdin, stdout, sys.stderr, sys.stdout, paths, preserve, check_hash)
     if ret == error.E_OK or ret == error.E_END :
@@ -44,7 +48,11 @@ def _local_recv(ssh, paths, dir_path, rec, preserve, check_hash) :
     if not check_hash :
         command += " --disable-hash-check"
     command = ' '.join((command, ' '.join(paths)))
-    stdin, stdout, stderr = ssh.exec_command(command)
+    try :
+        stdin, stdout, stderr = ssh.exec_command(command)
+    except Exception as ex :
+        sys.stderr.write(str(ex))
+        return 1
 
     ret = tfr.recv(stdin, stdout, sys.stderr, sys.stdout, dir_path, preserve, check_hash)
     if ret == error.E_OK or ret == error.E_END :
