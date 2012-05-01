@@ -3,6 +3,7 @@
 import os
 import sys
 import time
+import socket
 import error
 
 def _print_progress(p, file_name, sent, size, time_elapsed) :
@@ -239,21 +240,35 @@ def send_dir(i, o, e, progress, dir_path, preserve, check_hash) :
     return error.E_OK
 
 def send(i, o, e, progress, paths, preserve, check_hash) :
-    # check if receiving end is ready
-    ret = o.read(1)
-    if ret != '\0' :
-        e.write(o.readline())
-        return error.E_RDY
+    try :
+        # check if receiving end is ready
+        ret = o.read(1)
+        if ret != '\0' :
+            e.write(o.readline())
+            return error.E_RDY
 
-    ret = error.E_OK
-    for p in paths :
-        if os.path.isfile(p) :
-            ret = send_file(i, o, e, progress, p, preserve, check_hash)
-        elif os.path.isdir(p) :
-            ret = send_dir(i, o, e, progress, p, preserve, check_hash)
-        if ret != error.E_OK :
-            break
-    return ret
+        ret = error.E_OK
+        for p in paths :
+            if os.path.isfile(p) :
+                ret = send_file(i, o, e, progress, p, preserve, check_hash)
+            elif os.path.isdir(p) :
+                ret = send_dir(i, o, e, progress, p, preserve, check_hash)
+            if ret != error.E_OK :
+                break
+        return ret
+    except socket.error as socket_ex :
+        # opposite side closed prematurely
+        e.write(str(socket_ex) + '\n')
+        ret = o.read(1)
+        if len(ret) > 0 and ret != '\0' :
+            e.write(o.readline())
+        e.flush()
+        return error.E_TFR
+    except Exception as ex :
+        i.write('\2')
+        i.write(str(ex) + '\n')
+        i.flush()
+        return error.E_TFR
 
 def recv_file_dir_or_end(i, o, e, progress, target_dir, preserve, check_hash) :
     command = o.readline()
@@ -389,18 +404,32 @@ def recv_dir(i, o, e, progress, dir_path, command, preserve, times, check_hash) 
             return ret
 
 def recv(i, o, e, progress, dir_path, preserve, check_hash) :
-    if not os.path.exists(os.path.dirname(dir_path)) :
-        i.write('\2')
-        i.write(error.errstr(error.E_MIS))
-        i.flush()
-        return error.E_MIS
-    else :
-        i.write('\0')
-        i.flush()
+    try :
+        if not os.path.exists(os.path.dirname(dir_path)) :
+            i.write('\2')
+            i.write(error.errstr(error.E_MIS))
+            i.flush()
+            return error.E_MIS
+        else :
+            i.write('\0')
+            i.flush()
 
-    while True :
-        ret = recv_file_dir_or_end(i, o, e, progress, dir_path, preserve, check_hash)
-        if ret == error.E_END :
-            return error.E_OK
-        if ret != error.E_OK :
-            return ret
+        while True :
+            ret = recv_file_dir_or_end(i, o, e, progress, dir_path, preserve, check_hash)
+            if ret == error.E_END :
+                return error.E_OK
+            if ret != error.E_OK :
+                return ret
+    except socket.error as socket_ex :
+        # opposite side closed prematurely
+        e.write(str(socket_ex) + '\n')
+        ret = o.read(1)
+        if len(ret) > 0 and ret != '\0' :
+            e.write(o.readline())
+        e.flush()
+        return error.E_TFR
+    except Exception as ex :
+        i.write('\2')
+        i.write(str(ex) + '\n')
+        i.flush()
+        return error.E_TFR
