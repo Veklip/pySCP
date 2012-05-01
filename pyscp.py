@@ -81,7 +81,7 @@ def _build_arg_parser() :
     parser.add_argument("-i", action="append", default=None, help="private key for public key authentication", metavar="identity_file", dest="pkeys")
     return parser
 
-if __name__ == "__main__" :
+def main() :
     import os
     os.stat_float_times(False)
 
@@ -101,19 +101,19 @@ if __name__ == "__main__" :
         # only executed by the local
         if len(paths) < 2 :
             parser.print_help()
-            exit(1)
+            return 1
         send, user, host, paths = psr.analyse_paths(paths)
         if len(host) == 0 :
-            exit(1)
+            return 1
 
         if not psr.check_pkeys(args.pkeys) :
-            exit(1)
+            return 1
 
         try :
             ssh = con.get_connection(user, host, args.port, args.pkeys)
         except Exception as ex :
             sys.stderr.write(str(ex) + '\n')
-            exit(1)
+            return 1
 
         if args.quiet :
             null = open(os.devnull, 'r+')
@@ -136,4 +136,7 @@ if __name__ == "__main__" :
             sys.stdout = local_out
             null.close()
         ssh.close()
-    exit(ret)
+    return ret
+
+if __name__ == "__main__" :
+    exit(main())
