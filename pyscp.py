@@ -10,17 +10,20 @@ import connector as con
 import error
 import transfer as tfr
 
-def _local_send(ssh, paths, sink_path, rec, preserve, check_hash) :
-    command = "pyscp.py -t"
+def _exec_command(ssh, command, paths, rec, preserve, check_hash) :
     if rec :
-        command += "r"
+        command += " -r"
     if preserve :
-        command += "p"
+        command += " -p"
     if not check_hash :
         command += " --disable-hash-check"
-    command = ' '.join((command, sink_path))
+    command = ' '.join((command, paths))
+    return ssh.exec_command(command)
+
+def _local_send(ssh, paths, sink_path, rec, preserve, check_hash) :
     try :
-        stdin, stdout, stderr = ssh.exec_command(command)
+        stdin, stdout, stderr = _exec_command(ssh, "pyscp.py -t", sink_path,
+                                              rec, preserve, check_hash)
     except Exception as ex :
         sys.stderr.write(str(ex))
         return 1
@@ -40,16 +43,9 @@ def _remote_send(paths, rec, preserve, check_hash) :
         return 1
 
 def _local_recv(ssh, paths, dir_path, rec, preserve, check_hash) :
-    command = "pyscp.py -f"
-    if rec :
-        command += "r"
-    if preserve :
-        command += "p"
-    if not check_hash :
-        command += " --disable-hash-check"
-    command = ' '.join((command, ' '.join(paths)))
     try :
-        stdin, stdout, stderr = ssh.exec_command(command)
+        stdin, stdout, stderr = _exec_command(ssh, "pyscp.py -f", ' '.join(paths),
+                                              rec, preserve, check_hash)
     except Exception as ex :
         sys.stderr.write(str(ex))
         return 1
