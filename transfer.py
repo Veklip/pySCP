@@ -28,7 +28,7 @@ def _print_progress(p, file_name, sent, size, time_elapsed) :
     bar += ' ' * (bar_width - 5 - len(bar))
     bar += ' {0: >4.0%}'.format(percent)
 
-    size_mark = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB','ZB', 'YB']
+    size_mark = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB']
     mark_index = 0
     sent_bytes = sent
     while sent_bytes >= 1000.0 :
