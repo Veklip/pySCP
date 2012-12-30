@@ -66,7 +66,7 @@ def _remote_recv(dir_path, rec, preserve, check_hash) :
 
 def _build_arg_parser() :
     parser = argparse.ArgumentParser(description="Python secure copy over ssh", prog="pyscp")
-    parser.add_argument("paths", action="store", nargs="+", default=None, help="[[user@]host1:]file1 ... [[user@]host2:]file2")
+    parser.add_argument("paths", action="store", nargs="+", default=[], help="[[user@]host1:]file1 ... [[user@]host2:]file2")
     parser.add_argument("-f", action="store_true", default=None, help="source", dest="from_v")
     parser.add_argument("-t", action="store_true", default=None, help="destination", dest="to_v")
     parser.add_argument("-r", action="store_true", default=None, help="recursively copy directories", dest="rec")
@@ -74,7 +74,7 @@ def _build_arg_parser() :
     parser.add_argument("-q", action="store_true", default=None, help="do not print any output", dest="quiet")
     parser.add_argument("--disable-hash-check", action="store_false", default=True, help="disable SHA1 comparison between source and destination files", dest="check_hash")
     parser.add_argument("-P", action="store", default=22, type=int, help="port on remote host to connect to", dest="port")
-    parser.add_argument("-i", action="append", default=None, help="private key for public key authentication", metavar="identity_file", dest="pkeys")
+    parser.add_argument("-i", action="append", default=[], help="private key for public key authentication", metavar="identity_file", dest="pkeys")
     return parser
 
 def main() :

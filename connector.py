@@ -51,16 +51,14 @@ def _connect_with_password(ssh, user, host, dport=22) :
     else :
         return False
 
-def get_connection(user, host, dport=22, pkeys=None) :
+def get_connection(user, host, dport=22, pkeys=[]) :
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(policies.SSHWarningPolicy())
     known_hosts = os.path.expanduser(os.path.join('~', '.ssh', 'known_hosts'))
     if os.path.exists(known_hosts) :
         ssh.load_host_keys(known_hosts)
 
-    _pkeys = pkeys if pkeys is not None else ()
-
-    for key in _pkeys :
+    for key in pkeys :
         try :
             lkey = _load_pkey(key)
             if lkey is None :
