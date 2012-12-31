@@ -5,6 +5,7 @@ w.filterwarnings('ignore', '.*RandomPool.*', DeprecationWarning, '.*randpool', 0
 
 import sys
 import argparse
+import logging
 import parser as psr
 import connector as con
 import error
@@ -75,6 +76,7 @@ def _build_arg_parser() :
     parser.add_argument("--disable-hash-check", action="store_false", default=True, help="disable SHA1 comparison between source and destination files", dest="check_hash")
     parser.add_argument("-P", action="store", default=22, type=int, help="port on remote host to connect to", dest="port")
     parser.add_argument("-i", action="append", default=[], help="private key for public key authentication", metavar="identity_file", dest="pkeys")
+    parser.add_argument("-v", action="append_const", const=None, default=[], help="verbose mode", dest="verbose")
     return parser
 
 def main() :
@@ -83,6 +85,16 @@ def main() :
 
     parser = _build_arg_parser()
     args = parser.parse_args(sys.argv[1:])
+
+    verbose_level = min(len(args.verbose), 3)
+    if (verbose_level == 0) :
+        logging.basicConfig(level=logging.WARNING)
+    if (verbose_level == 1) :
+        logging.basicConfig(level=logging.INFO)
+    if (verbose_level == 2) :
+        logging.basicConfig(level=logging.DEBUG)
+    if (verbose_level == 3) :
+        logging.basicConfig(level=logging.NOTSET)
 
     # these should only be called by the remote
     ret = 1
