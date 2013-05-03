@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 from paramiko import WarningPolicy, SSHException
 from binascii import hexlify
 

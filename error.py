@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 E_OK  = 0           # everything is ok
 E_END = 1           # end of transfer
 E_RDY = 2           # missing start signal
