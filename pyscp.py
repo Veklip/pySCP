@@ -4,14 +4,17 @@ import warnings as w
 w.filterwarnings('ignore', '.*RandomPool.*', DeprecationWarning, '.*randpool', 0)
 
 import sys
+import time
 import argparse
 import logging
 import parser as psr
 import connector as con
 import error
 import transfer as tfr
+import deployment as dep
 
-def _exec_command(ssh, command, paths, rec, preserve, check_hash) :
+def _exec_command(ssh, command, paths, f, rec, preserve, check_hash) :
+    command += " -f" if f else " -t"
     if rec :
         command += " -r"
     if preserve :
@@ -21,10 +24,27 @@ def _exec_command(ssh, command, paths, rec, preserve, check_hash) :
     command = ' '.join((command, paths))
     return ssh.exec_command(command)
 
+def _open_channels(ssh, paths, f, rec, preserve, check_hash) :
+    # Check if pyscp is available on remote
+    stdin, stdout, stderr = ssh.exec_command("pyscp.py -h")
+    while (not stdout.channel.exit_status_ready()) :
+        time.sleep(5./60.) # 5s
+    if (stdout.channel.recv_exit_status() == 0) :
+        stdin, stdout, stderr = _exec_command(ssh, "pyscp.py", paths,
+                                              f, rec, preserve, check_hash)
+    else :
+        if (not dep.deploy(ssh)) :
+            raise Exception("Deployment failed")
+
+        stdin, stdout, stderr = _exec_command(ssh, "python2 /tmp/pyscp.zip", paths,
+                                              f, rec, preserve, check_hash)
+
+    return stdin, stdout, stderr
+
 def _local_send(ssh, paths, sink_path, rec, preserve, check_hash) :
     try :
-        stdin, stdout, stderr = _exec_command(ssh, "pyscp.py -t", sink_path,
-                                              rec, preserve, check_hash)
+        stdin, stdout, stderr = _open_channels(ssh, sink_path,
+                                               False, rec, preserve, check_hash)
     except Exception as ex :
         sys.stderr.write(str(ex) + '\n')
         return 1
@@ -45,8 +65,8 @@ def _remote_send(paths, rec, preserve, check_hash) :
 
 def _local_recv(ssh, paths, dir_path, rec, preserve, check_hash) :
     try :
-        stdin, stdout, stderr = _exec_command(ssh, "pyscp.py -f", ' '.join(paths),
-                                              rec, preserve, check_hash)
+        stdin, stdout, stderr = _open_channels(ssh, ' '.join(paths),
+                                               True, rec, preserve, check_hash)
     except Exception as ex :
         sys.stderr.write(str(ex) + '\n')
         return 1
