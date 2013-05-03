@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 
 import warnings as w
 w.filterwarnings('ignore', '.*RandomPool.*', DeprecationWarning, '.*randpool', 0)
