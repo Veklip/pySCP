@@ -26,7 +26,7 @@ def _local_send(ssh, paths, sink_path, rec, preserve, check_hash) :
         stdin, stdout, stderr = _exec_command(ssh, "pyscp.py -t", sink_path,
                                               rec, preserve, check_hash)
     except Exception as ex :
-        sys.stderr.write(str(ex))
+        sys.stderr.write(str(ex) + '\n')
         return 1
 
     ret = tfr.send(stdin, stdout, sys.stderr, sys.stdout, paths, preserve, check_hash)
@@ -48,7 +48,7 @@ def _local_recv(ssh, paths, dir_path, rec, preserve, check_hash) :
         stdin, stdout, stderr = _exec_command(ssh, "pyscp.py -f", ' '.join(paths),
                                               rec, preserve, check_hash)
     except Exception as ex :
-        sys.stderr.write(str(ex))
+        sys.stderr.write(str(ex) + '\n')
         return 1
 
     ret = tfr.recv(stdin, stdout, sys.stderr, sys.stdout, dir_path, preserve, check_hash)
