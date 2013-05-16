@@ -24,11 +24,11 @@ def _exec_command(ssh, command, paths, f, rec, preserve, check_hash) :
 
 def _open_channels(ssh, paths, f, rec, preserve, check_hash) :
     # Check if pyscp is available on remote
-    stdin, stdout, stderr = ssh.exec_command("pyscp.py -h")
+    stdin, stdout, stderr = ssh.exec_command("pyscp -h")
     while (not stdout.channel.exit_status_ready()) :
         time.sleep(5./60.) # 5s
     if (stdout.channel.recv_exit_status() == 0) :
-        stdin, stdout, stderr = _exec_command(ssh, "pyscp.py", paths,
+        stdin, stdout, stderr = _exec_command(ssh, "pyscp", paths,
                                               f, rec, preserve, check_hash)
     else :
         if (not dep.deploy(ssh)) :
