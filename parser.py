@@ -1,4 +1,5 @@
 import os
+import os.path
 import sys
 import getpass
 
@@ -8,7 +9,7 @@ def parse_paths(paths) :
         host_path = path.split(':', 1)
         if len(host_path) == 1 :
             # local path
-            parsed_paths.append({'user':'current', 'host':'local', 'path':host_path[0]})
+            parsed_paths.append({'user':'current', 'host':'local', 'path':os.path.abspath(host_path[0])})
         else :
             # remote path
             usr_host = host_path[0].split('@', 1)
