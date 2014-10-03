@@ -1,6 +1,3 @@
-import warnings as w
-w.filterwarnings('ignore', '.*RandomPool.*', DeprecationWarning, '.*randpool', 0)
-
 import sys
 import time
 import argparse
