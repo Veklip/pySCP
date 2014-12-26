@@ -141,8 +141,7 @@ def main() :
             parser.print_usage()
             return 1
 
-        if (not psr.check_pkeys(args.pkeys)):
-            return 1
+        pkeys = psr.unique_paths(psr.normalise_paths(args.pkeys))
 
         if (args.quiet):
             null = open(os.devnull, 'r+')
@@ -154,14 +153,14 @@ def main() :
         send = not sink.host == localhost
         for src in sources:
             if (send):
-                ssh = con.get_connection(sink.user, sink.host, args.port, args.pkeys)
+                ssh = con.get_connection(sink.user, sink.host, args.port, pkeys)
                 # from local to remote
                 ret = _local_send(ssh, src.path, sink.path[0],
                                   args.rec, args.preserve, args.check_hash)
                 ssh.close()
             else:
                 # from remote to local
-                ssh = con.get_connection(src.user, src.host, args.port, args.pkeys)
+                ssh = con.get_connection(src.user, src.host, args.port, pkeys)
                 ret = _local_recv(ssh, src.path, sink.path[0],
                                   args.rec, args.preserve, args.check_hash)
                 ssh.close()

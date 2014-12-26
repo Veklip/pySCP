@@ -62,14 +62,3 @@ def unique_paths(paths):
         else:
             sys.stdout.write('pyscp: warning: skipping duplicate: "{}".\n'.format(path))
     return unq_paths
-
-
-def check_pkeys(pkey_files) :
-    if pkey_files is None :
-        return True
-
-    for key in pkey_files :
-        if not os.path.exists(key) :
-            sys.stderr.write("Key file '{0}' doesn't exist\n".format(key))
-            return False
-    return True
