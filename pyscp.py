@@ -92,7 +92,7 @@ def _build_arg_parser() :
     parser.add_argument("--disable-hash-check", action="store_false", default=True, help="disable SHA1 comparison between source and destination files", dest="check_hash")
     parser.add_argument("-P", action="store", default=22, type=int, help="port on remote host to connect to", dest="port")
     parser.add_argument("-i", action="append", default=[], help="private key for public key authentication", metavar="identity_file", dest="pkeys")
-    parser.add_argument("-v", action="append_const", const=None, default=[], help="verbose mode", dest="verbose")
+    parser.add_argument("-v", action="count", help="verbose mode", dest="verbose")
     return parser
 
 def main() :
@@ -102,15 +102,14 @@ def main() :
     parser = _build_arg_parser()
     args = parser.parse_args(sys.argv[1:])
 
-    verbose_level = min(len(args.verbose), 3)
-    if (verbose_level == 0) :
-        logging.basicConfig(level=logging.WARNING)
-    if (verbose_level == 1) :
-        logging.basicConfig(level=logging.INFO)
-    if (verbose_level == 2) :
-        logging.basicConfig(level=logging.DEBUG)
-    if (verbose_level == 3) :
+    if (args.verbose >= 3):
         logging.basicConfig(level=logging.NOTSET)
+    elif (args.verbose == 2):
+        logging.basicConfig(level=logging.DEBUG)
+    elif (args.verbose == 1):
+        logging.basicConfig(level=logging.INFO)
+    elif (args.verbose == 0):
+        logging.basicConfig(level=logging.WARNING)
 
     ret = 1
     if (args.from_ or args.to_):
