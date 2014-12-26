@@ -84,8 +84,8 @@ def _remote_recv(dir_path, rec, preserve, check_hash) :
 def _build_arg_parser() :
     parser = argparse.ArgumentParser(description="Python secure copy over ssh", prog="pyscp")
     parser.add_argument("paths", action="store", nargs="+", default=[], type=psr.parse_scp_path, help="[[user@]host1:]file1 ... [[user@]host2:]file2")
-    parser.add_argument("-f", action="store_true", default=None, help="source", dest="from_v")
-    parser.add_argument("-t", action="store_true", default=None, help="destination", dest="to_v")
+    parser.add_argument("-f", action="store_true", default=None, help="source", dest="from_")
+    parser.add_argument("-t", action="store_true", default=None, help="destination", dest="to_")
     parser.add_argument("-r", action="store_true", default=None, help="recursively copy directories", dest="rec")
     parser.add_argument("-p", action="store_true", default=None, help="preserve access and modification times", dest="preserve")
     parser.add_argument("-q", action="store_true", default=None, help="do not print any output", dest="quiet")
@@ -113,16 +113,16 @@ def main() :
         logging.basicConfig(level=logging.NOTSET)
 
     ret = 1
-    if (args.from_v or args.to_v):
+    if (args.from_ or args.to_):
         # only executed by the remote
         paths = [path.path for path in args.paths]
         paths = psr.normalise_paths(paths)
         paths = psr.unique_paths(paths)
 
-        if (args.from_v):
+        if (args.from_):
             ret = _remote_send(paths, args.rec, args.preserve,
                                args.check_hash)
-        elif (args.to_v):
+        elif (args.to_):
             ret = _remote_recv(paths[0], args.rec, args.preserve,
                                args.check_hash)
     else:
