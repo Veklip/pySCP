@@ -9,27 +9,29 @@ import error
 import transfer as tfr
 import deployment as dep
 
-def _exec_command(ssh, command, paths, f, rec, preserve, check_hash) :
+
+def _exec_command(ssh, command, paths, f, rec, preserve, check_hash):
     command += " -f" if f else " -t"
-    if rec :
+    if rec:
         command += " -r"
-    if preserve :
+    if preserve:
         command += " -p"
-    if not check_hash :
+    if not check_hash:
         command += " --disable-hash-check"
     command = ' '.join((command, paths))
     return ssh.exec_command(command)
 
-def _open_channels(ssh, paths, f, rec, preserve, check_hash) :
+
+def _open_channels(ssh, paths, f, rec, preserve, check_hash):
     # Check if pyscp is available on remote
     stdin, stdout, stderr = ssh.exec_command("pyscp -h")
-    while (not stdout.channel.exit_status_ready()) :
-        time.sleep(5./60.) # 5s
-    if (stdout.channel.recv_exit_status() == 0) :
+    while (not stdout.channel.exit_status_ready()):
+        time.sleep(5. / 60.)  # 5s
+    if (stdout.channel.recv_exit_status() == 0):
         stdin, stdout, stderr = _exec_command(ssh, "pyscp", paths,
                                               f, rec, preserve, check_hash)
-    else :
-        if (not dep.deploy(ssh)) :
+    else:
+        if (not dep.deploy(ssh)):
             raise Exception("Deployment failed")
 
         stdin, stdout, stderr = _exec_command(ssh, "python2 /tmp/pyscp.zip", paths,
@@ -37,51 +39,56 @@ def _open_channels(ssh, paths, f, rec, preserve, check_hash) :
 
     return stdin, stdout, stderr
 
-def _local_send(ssh, paths, sink_path, rec, preserve, check_hash) :
-    try :
+
+def _local_send(ssh, paths, sink_path, rec, preserve, check_hash):
+    try:
         stdin, stdout, stderr = _open_channels(ssh, sink_path,
                                                False, rec, preserve, check_hash)
-    except Exception as ex :
+    except Exception as ex:
         sys.stderr.write(str(ex) + '\n')
         return 1
 
     ret = tfr.send(stdin, stdout, sys.stderr, sys.stdout, paths, preserve, check_hash)
-    if ret == error.E_OK or ret == error.E_END :
+    if ret == error.E_OK or ret == error.E_END:
         return 0
-    else :
+    else:
         sys.stderr.write(stderr.readline())
         return 1
 
-def _remote_send(paths, rec, preserve, check_hash) :
+
+def _remote_send(paths, rec, preserve, check_hash):
     ret = tfr.send(sys.stdout, sys.stdin, sys.stderr, None, paths, preserve, check_hash)
-    if ret == error.E_OK or ret == error.E_END :
+    if ret == error.E_OK or ret == error.E_EN:
         return 0
-    else :
+    else:
         return 1
 
-def _local_recv(ssh, paths, dir_path, rec, preserve, check_hash) :
-    try :
+
+def _local_recv(ssh, paths, dir_path, rec, preserve, check_hash):
+    try:
         stdin, stdout, stderr = _open_channels(ssh, ' '.join(paths),
                                                True, rec, preserve, check_hash)
-    except Exception as ex :
+    except Exception as ex:
         sys.stderr.write(str(ex) + '\n')
         return 1
 
     ret = tfr.recv(stdin, stdout, sys.stderr, sys.stdout, dir_path, preserve, check_hash)
-    if ret == error.E_OK or ret == error.E_END :
+    if ret == error.E_OK or ret == error.E_END:
         return 0
-    else :
+    else:
         sys.stderr.write(stderr.readline())
         return 1
 
-def _remote_recv(dir_path, rec, preserve, check_hash) :
+
+def _remote_recv(dir_path, rec, preserve, check_hash):
     ret = tfr.recv(sys.stdout, sys.stdin, sys.stderr, None, dir_path, preserve, check_hash)
-    if ret == error.E_OK or ret == error.E_END :
+    if ret == error.E_OK or ret == error.E_END:
         return 0
-    else :
+    else:
         return 1
 
-def _build_arg_parser() :
+
+def _build_arg_parser():
     parser = argparse.ArgumentParser(description="Python secure copy over ssh", prog="pyscp")
     parser.add_argument("paths", action="store", nargs="+", default=[], type=psr.parse_scp_path, help="[[user@]host1:]file1 ... [[user@]host2:]file2")
     parser.add_argument("-f", action="store_true", default=None, help="source", dest="from_")
@@ -95,7 +102,8 @@ def _build_arg_parser() :
     parser.add_argument("-v", action="count", help="verbose mode", dest="verbose")
     return parser
 
-def main() :
+
+def main():
     import os
     os.stat_float_times(False)
 
