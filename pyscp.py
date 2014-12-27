@@ -3,7 +3,7 @@ import time
 import argparse
 import logging
 import socket
-import parser as psr
+import scppath as scpp
 import connector as con
 import error
 import transfer as tfr
@@ -90,7 +90,7 @@ def _remote_recv(dir_path, rec, preserve, check_hash):
 
 def _build_arg_parser():
     parser = argparse.ArgumentParser(description="Python secure copy over ssh", prog="pyscp")
-    parser.add_argument("paths", action="store", nargs="+", default=[], type=psr.parse_scp_path, help="[[user@]host1:]file1 ... [[user@]host2:]file2")
+    parser.add_argument("paths", action="store", nargs="+", default=[], type=scpp.parse_scp_path, help="[[user@]host1:]file1 ... [[user@]host2:]file2")
     parser.add_argument("-f", action="store_true", default=None, help="source", dest="from_")
     parser.add_argument("-t", action="store_true", default=None, help="destination", dest="to_")
     parser.add_argument("-r", action="store_true", default=None, help="recursively copy directories", dest="rec")
@@ -123,8 +123,8 @@ def main():
     if (args.from_ or args.to_):
         # only executed by the remote
         paths = [path.path for path in args.paths]
-        paths = psr.normalise_paths(paths)
-        paths = psr.unique_paths(paths)
+        paths = scpp.normalise_paths(paths)
+        paths = scpp.unique_paths(paths)
 
         if (args.from_):
             ret = _remote_send(paths, args.rec, args.preserve,
@@ -136,9 +136,9 @@ def main():
         # only executed by the local
         localhost = socket.getfqdn()
         paths = []
-        for path in psr.group_scp_paths(args.paths):
+        for path in scpp.group_scp_paths(args.paths):
             if (path.host == localhost):
-                path.path = psr.unique_paths(psr.normalise_paths(path.path))
+                path.path = scpp.unique_paths(scpp.normalise_paths(path.path))
             paths.append(path)
 
         sources = paths[:-1]
@@ -148,7 +148,7 @@ def main():
             parser.print_usage()
             return 1
 
-        pkeys = psr.unique_paths(psr.normalise_paths(args.pkeys))
+        pkeys = scpp.unique_paths(scpp.normalise_paths(args.pkeys))
 
         if (args.quiet):
             null = open(os.devnull, 'r+')
