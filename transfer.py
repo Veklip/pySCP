@@ -284,7 +284,7 @@ def recv_file_dir_or_end(i, o, e, progress, target_dir, preserve, check_hash) :
                 i.write('\2')
                 i.write(error.errstr(error.E_UNK))
                 i.flush()
-                return E_UNK
+                return error.E_UNK
             # ready tuple for utime (atime, mtime)
             times = (int(times[2]), int(times[0]))
             i.write('\0')
@@ -299,7 +299,7 @@ def recv_file_dir_or_end(i, o, e, progress, target_dir, preserve, check_hash) :
             i.write('\2')
             i.write(error.errstr(error.E_UNK))
             i.flush()
-            return E_UNK
+            return error.E_UNK
     ret = error.E_UNK
     if command[0] == 'C' :
         i.write('\0')
