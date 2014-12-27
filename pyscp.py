@@ -31,11 +31,13 @@ def _open_channels(ssh, paths, f, rec, preserve, check_hash):
         stdin, stdout, stderr = _exec_command(ssh, "pyscp", paths,
                                               f, rec, preserve, check_hash)
     else:
-        if (not dep.deploy(ssh)):
+        remote_tempfile = dep.deploy(ssh)
+        if (not remote_tempfile):
             raise Exception("Deployment failed")
 
-        stdin, stdout, stderr = _exec_command(ssh, "python2 /tmp/pyscp.zip", paths,
-                                              f, rec, preserve, check_hash)
+        stdin, stdout, stderr = \
+            _exec_command(ssh, "python2 '{}'".format(remote_tempfile), paths,
+                          f, rec, preserve, check_hash)
 
     return stdin, stdout, stderr
 
