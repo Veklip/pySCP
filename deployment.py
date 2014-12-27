@@ -21,7 +21,7 @@ def deploy(ssh):
         sys.stderr.write("Deployment is supported only on Linux\n")
         return False
 
-    tf = tempfile.NamedTemporaryFile(mode="wb", suffix=".zip", dir="/tmp", delete=True)
+    tf = tempfile.NamedTemporaryFile(mode="wb", suffix=".zip", delete=True)
     pzf = zipfile.PyZipFile(tf, mode="w")
     pzf.writepy(os.path.dirname(sys.argv[0]))
     pzf.close()
