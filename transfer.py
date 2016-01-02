@@ -1,7 +1,9 @@
 import os
 import time
+import math
 import socket
 import error
+import hashlib
 
 
 _DATA_CHUNK = 512 * 1024
@@ -10,7 +12,6 @@ _DATA_CHUNK = 512 * 1024
 def _print_progress(p, file_name, sent, size, time_elapsed):
     # progress line format
     # file name ==========> percentage size speed time
-    import math
     # TODO: get real line width. Currently
     # no unified way between unix and windows exists.
     line_width = 80
@@ -117,8 +118,7 @@ def _recv_file_data(o, progress, file_path, size, seek):
 
 
 def _calculate_hash(file_path, size):
-    from hashlib import sha1
-    sha = sha1()
+    sha = hashlib.sha1()
 
     fo = open(file_path, 'rb')
     bytes_to_hash = size

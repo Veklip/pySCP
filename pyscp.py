@@ -1,3 +1,4 @@
+import os
 import sys
 import time
 import argparse
@@ -106,7 +107,6 @@ def _build_arg_parser():
 
 
 def main():
-    import os
     os.stat_float_times(False)
 
     parser = _build_arg_parser()
