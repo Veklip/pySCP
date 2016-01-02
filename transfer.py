@@ -4,6 +4,9 @@ import socket
 import error
 
 
+_DATA_CHUNK = 512 * 1024
+
+
 def _print_progress(p, file_name, sent, size, time_elapsed):
     # progress line format
     # file name ==========> percentage size speed time
@@ -70,10 +73,10 @@ def _send_file_data(i, progress, file_path, size, seek):
     start = time.time()
     bytes_to_send = size - seek
     while True:
-        if bytes_to_send < 4096:
+        if bytes_to_send < _DATA_CHUNK:
             chunk = bytes_to_send
         else:
-            chunk = 4096
+            chunk = _DATA_CHUNK
         buf = fo.read(chunk)
         if len(buf):
             i.write(buf)
@@ -95,10 +98,10 @@ def _recv_file_data(o, progress, file_path, size, seek):
     start = time.time()
     bytes_to_recv = size - seek
     while True:
-        if bytes_to_recv < 4096:
+        if bytes_to_recv < _DATA_CHUNK:
             chunk = bytes_to_recv
         else:
-            chunk = 4096
+            chunk = _DATA_CHUNK
         buf = o.read(chunk)
         if len(buf):
             fo.write(buf)
@@ -120,10 +123,10 @@ def _calculate_hash(file_path, size):
     fo = open(file_path, 'rb')
     bytes_to_hash = size
     while bytes_to_hash > 0:
-        if bytes_to_hash < 4096:
+        if bytes_to_hash < _DATA_CHUNK:
             chunk = bytes_to_hash
         else:
-            chunk = 4096
+            chunk = _DATA_CHUNK
         buf = fo.read(chunk)
         sha.update(buf)
         bytes_to_hash -= len(buf)
