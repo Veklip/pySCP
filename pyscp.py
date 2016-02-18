@@ -61,7 +61,7 @@ def _local_send(ssh, paths, sink_path, rec, preserve, check_hash):
 
 def _remote_send(paths, rec, preserve, check_hash):
     ret = tfr.send(sys.stdout, sys.stdin, sys.stderr, None, paths, preserve, check_hash)
-    if ret == error.E_OK or ret == error.E_EN:
+    if ret == error.E_OK or ret == error.E_END:
         return 0
     else:
         return 1
